@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.pdf
+!samples/*.pdf
+.DS_Store
+.streamlit/secrets.toml
+node_modules/
+dev.js
+package.json
