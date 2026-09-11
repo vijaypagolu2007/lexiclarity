@@ -6,6 +6,8 @@ Run:  streamlit run app.py
 from __future__ import annotations
 
 import json
+import hashlib
+from pathlib import Path
 
 import streamlit as st
 
@@ -20,11 +22,29 @@ load_secrets_into_env()
 DISCLAIMER = "ℹ️ **Informational only — not legal advice.** LexiClarity explains what documents say; consult a qualified lawyer before acting."
 RISK_COLOR = {"Low": "#2e7d32", "Medium": "#f9a825", "High": "#c62828"}
 MAX_DOC_CHARS = 120_000
+SAMPLE_PATH = Path(__file__).resolve().parent / "samples" / "sample_rental_agreement.txt"
 
 
 # --------------------------------------------------------------------------- helpers
 def truncate(text: str, limit: int = MAX_DOC_CHARS) -> str:
     return text if len(text) <= limit else text[:limit] + "\n\n[...document truncated for length...]"
+
+
+def document_id(text: str) -> str:
+    """Return a stable, non-sensitive identifier for the current in-memory document."""
+    return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:16]
+
+
+def set_active_document(session_key: str, text: str) -> None:
+    """Reset document-scoped state when the user switches uploads."""
+    current_id = document_id(text)
+    previous_id = st.session_state.get(session_key)
+    if previous_id and previous_id != current_id:
+        if session_key == "chat_document_id":
+            st.session_state.chat_history = []
+        if session_key == "explorer_document_id":
+            st.session_state.clause_map = None
+    st.session_state[session_key] = current_id
 
 
 def read_upload(label: str, key: str) -> str | None:
@@ -34,11 +54,27 @@ def read_upload(label: str, key: str) -> str | None:
     try:
         with st.spinner("Extracting text…"):
             text = extract_text(f.name, f.read())
+        if not text.strip():
+            st.error("This file does not contain readable text.")
+            return None
         st.caption(f"✅ {f.name} — {len(text):,} characters extracted (in-memory only, nothing stored).")
         return text
     except ExtractionError as e:
         st.error(str(e))
         return None
+
+
+def read_upload_or_sample(label: str, key: str) -> str | None:
+    """Use an uploaded document, or the bundled sample when the user selects it."""
+    uploaded = read_upload(label, key)
+    if uploaded:
+        return uploaded
+    if st.session_state.get("use_sample_document"):
+        sample = st.session_state.get("sample_document")
+        if sample:
+            st.caption("✅ Included sample rental agreement loaded (in-memory only).")
+            return sample
+    return None
 
 
 def guardrail(text: str) -> dict | None:
@@ -85,16 +121,34 @@ st.markdown("**Understand any legal document in plain language** — simplify, c
 st.caption("PromptWars Virtual 2026 · Hack2skill × Google for Developers")
 st.warning(DISCLAIMER)
 
+with st.sidebar:
+    st.subheader("Quick start")
+    st.caption("Upload a contract in any tab, or load the included sample to explore the app immediately.")
+    if st.button("Load sample rental agreement", use_container_width=True):
+        try:
+            st.session_state.sample_document = SAMPLE_PATH.read_text(encoding="utf-8")
+            st.session_state.sample_name = SAMPLE_PATH.name
+            st.session_state.use_sample_document = True
+            st.session_state.chat_history = []
+            st.success("Sample loaded. Open Simplify, Clarify, or Ask Questions.")
+        except OSError as e:
+            st.error(f"Could not load the sample: {e}")
+    if st.session_state.get("sample_document"):
+        st.info(f"Sample available: {st.session_state.get('sample_name', 'sample document')}")
+    st.divider()
+    st.caption("Privacy mode: documents stay in memory for this session and are not written to disk.")
+
 if not api_key_configured():
     need_key()
 
-mode = st.tabs(["📄 Simplify", "🔍 Clarify a Clause", "🔀 Compare Contracts", "💬 Ask Questions"])
+mode = st.tabs(["📄 Simplify", "🧭 Clause Explorer", "🔍 Clarify a Clause", "🔀 Compare Contracts", "💬 Ask Questions"])
 
 # ------------------------------------------------------------- TAB 1: Simplify (FR-2)
 with mode[0]:
     st.subheader("Simplify a legal document")
-    doc = read_upload("Upload a contract / agreement / notice", "up_simplify")
+    doc = read_upload_or_sample("Upload a contract / agreement / notice", "up_simplify")
     if doc:
+        set_active_document("simplify_document_id", doc)
         level = st.radio("Reading level", ["Simple", "Simpler", "Summary"], horizontal=True,
                          help="Simple ≈ grade 8 · Simpler ≈ grade 5 · Summary = 5-bullet digest")
         if st.button("✨ Simplify", type="primary", disabled=not api_key_configured()):
@@ -107,11 +161,16 @@ with mode[0]:
                         st.stop()
                 sections = check_items(out.get("sections", []), doc)
                 rate = grounded_rate(sections)
-                st.success(f"Document type: {out.get('document_type', 'unknown')} · grounded citations: {rate:.0%}")
+                if rate >= 0.8:
+                    st.success(f"Document type: {out.get('document_type', 'unknown')} · grounded citations: {rate:.0%}")
+                else:
+                    st.warning(f"Document type: {out.get('document_type', 'unknown')} · grounded citations: {rate:.0%}. Review flagged sections carefully.")
                 for s in sections:
                     with st.container(border=True):
                         st.markdown(f"**{s.get('original_heading', 'Section')}**")
                         st.write(s.get("plain_text", ""))
+                        if not s.get("grounded", False):
+                            st.caption("⚠️ The citation for this section could not be matched exactly to the uploaded document.")
                         cite(s.get("source_span"), doc)
                 if out.get("key_terms"):
                     st.markdown("#### Key terms")
@@ -122,11 +181,69 @@ with mode[0]:
                                    file_name="lexiclarity_simplified.md", mime="text/markdown")
                 st.warning(DISCLAIMER)
 
-# ------------------------------------------------------------- TAB 2: Clarify (FR-3)
+# ------------------------------------------------------------- TAB 2: Clause Explorer
 with mode[1]:
-    st.subheader("Clause-by-clause clarification with risk flags")
-    doc = read_upload("Upload a document", "up_clarify")
+    st.subheader("Explore the document's clause map")
+    st.caption("See the document's major clauses, risk signals, source text, and relationships.")
+    doc = read_upload_or_sample("Upload a document", "up_explorer")
     if doc:
+        set_active_document("explorer_document_id", doc)
+        if st.button("🧭 Build clause map", type="primary", disabled=not api_key_configured()):
+            with st.spinner("Mapping clauses and relationships…"):
+                try:
+                    out = run_task("map", f"document_text:\n{truncate(doc)}")
+                except LLMError as e:
+                    st.error(str(e))
+                    st.stop()
+            clauses = check_items(out.get("clauses", []), doc)
+            valid_ids = {c.get("section_id") for c in clauses}
+            for clause in clauses:
+                clause["related_section_ids"] = [
+                    related for related in clause.get("related_section_ids", []) if related in valid_ids
+                ]
+            st.session_state.clause_map = {
+                "document_id": document_id(doc),
+                "document_type": out.get("document_type", "unknown"),
+                "clauses": clauses,
+            }
+
+        result = st.session_state.get("clause_map")
+        if result and result.get("document_id") == document_id(doc):
+            clauses = result.get("clauses", [])
+            rate = grounded_rate(clauses)
+            st.success(f"{len(clauses)} clauses mapped · grounded source spans: {rate:.0%}")
+            clause_by_id = {c.get("section_id"): c for c in clauses}
+            for clause in clauses:
+                risk = clause.get("risk_level", "Medium")
+                color = RISK_COLOR.get(risk, RISK_COLOR["Medium"])
+                grounded = clause.get("grounded", False)
+                related = [clause_by_id[r].get("heading", r) for r in clause.get("related_section_ids", []) if r in clause_by_id]
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{clause.get('heading', 'Clause')}** · "
+                        f"<span style='color:{color};font-weight:700'>● {risk}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    st.write(clause.get("summary", ""))
+                    st.caption(f"Why this risk level: {clause.get('risk_reason', 'Not specified.')}")
+                    if related:
+                        st.caption("🔗 Related clauses: " + ", ".join(related))
+                    if not grounded:
+                        st.warning("This source span could not be matched exactly to the uploaded document.")
+                    cite(clause.get("source_span"), doc)
+            export = "# Clause map\n\n" + "\n\n".join(
+                f"## {c.get('heading', 'Clause')} — {c.get('risk_level', 'Medium')} risk\n\n"
+                f"{c.get('summary', '')}\n\n> {c.get('source_span', '')}"
+                for c in clauses
+            )
+            st.download_button("⬇️ Export clause map (Markdown)", export, "lexiclarity_clause_map.md", "text/markdown")
+
+# ------------------------------------------------------------- TAB 3: Clarify (FR-3)
+with mode[2]:
+    st.subheader("Clause-by-clause clarification with risk flags")
+    doc = read_upload_or_sample("Upload a document", "up_clarify")
+    if doc:
+        set_active_document("clarify_document_id", doc)
         clause = st.text_area("Paste the clause you want explained (or copy it from your document):",
                               height=150, placeholder="e.g. The Tenant shall pay a late fee of 5% per month…")
         if st.button("🔍 Clarify clause", type="primary", disabled=not (clause and api_key_configured())):
@@ -146,8 +263,8 @@ with mode[1]:
             cite(out.get("source_span"), doc)
             st.warning(DISCLAIMER)
 
-# ------------------------------------------------------------- TAB 3: Compare (FR-4)
-with mode[2]:
+# ------------------------------------------------------------- TAB 4: Compare (FR-4)
+with mode[3]:
     st.subheader("Compare two contract versions")
     c1, c2 = st.columns(2)
     with c1:
@@ -155,6 +272,7 @@ with mode[2]:
     with c2:
         doc_b = read_upload("Version B (e.g. revised)", "up_b")
     if doc_a and doc_b:
+        set_active_document("compare_document_id", f"{doc_a}\n---VERSION-B---\n{doc_b}")
         if st.button("🔀 Compare", type="primary", disabled=not api_key_configured()):
             with st.spinner("Comparing clause-by-clause…"):
                 try:
@@ -186,11 +304,12 @@ with mode[2]:
                 st.info(f"**Overall assessment:** {out['overall_assessment']}")
             st.warning(DISCLAIMER)
 
-# ------------------------------------------------------------- TAB 4: Chat (FR-8)
-with mode[3]:
+# ------------------------------------------------------------- TAB 5: Chat (FR-8)
+with mode[4]:
     st.subheader("Ask questions about your document")
-    doc = read_upload("Upload a document", "up_chat")
+    doc = read_upload_or_sample("Upload a document", "up_chat")
     if doc:
+        set_active_document("chat_document_id", doc)
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
         for turn in st.session_state.chat_history:

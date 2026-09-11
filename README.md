@@ -7,6 +7,7 @@
 | Feature | PRD | What it does |
 |---|---|---|
 | 📄 Simplify | FR-2 | Rewrites any contract in plain language at 3 reading levels (Simple / Simpler / Summary) |
+| 🧭 Clause Explorer | — | Builds a grounded clause map with risk levels, source spans, and related-clause links |
 | 🔍 Clause Clarifier | FR-3 | Paste any clause → plain-English explanation + Low/Medium/High risk flag |
 | 🔀 Compare | FR-4 | Two contract versions → clause-by-clause diff with materiality labels |
 | 💬 Ask Questions | FR-8 | Free-form Q&A grounded in your uploaded document (retrieval + Gemini) |
@@ -47,7 +48,7 @@ All prompts are versioned under [`prompts/`](prompts/):
 
 - `system.md` — role, grounding, refusal, and output contracts
 - `guardrail.md` — legal-vs-non-legal classifier (runs before processing)
-- `simplify.md` / `clarify.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
+- `simplify.md` / `map.md` / `clarify.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
 - Every schema includes `source_span`; `src/grounding.py` verifies each span against the source and the UI flags ungrounded citations instead of hiding them.
 
 ## Deployment
