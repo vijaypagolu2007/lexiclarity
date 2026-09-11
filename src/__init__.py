@@ -1,0 +1,1 @@
+"""LexiClarity application modules."""

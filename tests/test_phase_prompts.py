@@ -1,4 +1,5 @@
 from src.llm import load_prompt
+from src.llm import last_metrics
 
 
 def test_clause_map_prompt_contains_phase_one_contract():
@@ -23,3 +24,7 @@ def test_negotiation_prompt_contains_phase_two_safety_contract():
         assert field in prompt
     assert "not legal advice" in prompt.lower()
     assert "enforceable" in prompt.lower()
+
+
+def test_llm_metrics_export_is_available_to_streamlit_app():
+    assert last_metrics() == {}
