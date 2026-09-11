@@ -1,6 +1,6 @@
 # ⚖️ LexiClarity
 
-**AI for Legal Assistance & Access** — a GenAI web app that makes legal documents understandable to non-lawyers. Built for **PromptWars Virtual 2026 (Exclusive Edition)** by Hack2skill × Google for Developers. See [PRD.md](PRD.md).
+**AI for Legal Assistance & Access** — a GenAI web app that makes legal documents understandable to non-lawyers. Built for Hackathon. See [PRD.md](PRD.md).
 
 ## Features
 

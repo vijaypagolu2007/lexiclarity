@@ -7,12 +7,9 @@
 | Field | Detail |
 |---|---|
 | **Product Name** | LexiClarity (working title) |
-| **Event** | PromptWars Virtual — Exclusive Edition (Invite-Only Calibration Track) |
-| **Organizers** | Hack2skill × Google for Developers |
+| **Event** | PromptWars Virtual |
 | **Document Date** | 9 September 2026 |
 | **Version** | v1.0 |
-| **Submission Deadline** | 26 September 2026 |
-| **Reward** | 1,000 Prompt Credits guaranteed per valid submission |
 
 ---
 
