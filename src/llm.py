@@ -13,12 +13,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 _client = None
+_last_metrics: dict = {}
 
 
 class LLMError(Exception):
@@ -62,11 +64,13 @@ def _parse_json(raw: str) -> dict:
 
 def run_task(prompt_name: str, payload: str, client=None) -> dict:
     """Send a task prompt + payload to Gemini, return parsed JSON dict."""
+    global _last_metrics
     from google.genai import types
 
     client = client or _get_client()
     template = load_prompt(prompt_name)
     prompt = f"{template}\n\n===== INPUT =====\n{payload}"
+    started = time.perf_counter()
     try:
         resp = client.models.generate_content(
             model=DEFAULT_MODEL,
@@ -77,11 +81,27 @@ def run_task(prompt_name: str, payload: str, client=None) -> dict:
                 temperature=0.2,
             ),
         )
-        return _parse_json(resp.text)
+        parsed = _parse_json(resp.text)
+        usage = getattr(resp, "usage_metadata", None)
+        _last_metrics = {
+            "prompt": prompt_name,
+            "model": DEFAULT_MODEL,
+            "elapsed_ms": round((time.perf_counter() - started) * 1000),
+            "prompt_tokens": getattr(usage, "prompt_token_count", None) if usage else None,
+            "output_tokens": getattr(usage, "candidates_token_count", None) if usage else None,
+            "total_tokens": getattr(usage, "total_token_count", None) if usage else None,
+            "cached": False,
+        }
+        return parsed
     except LLMError:
         raise
     except Exception as e:
         raise LLMError(f"Gemini request failed: {e}") from e
+
+
+def last_metrics() -> dict:
+    """Return metrics for the most recent successful Gemini call."""
+    return dict(_last_metrics)
 
 
 def api_key_configured() -> bool:

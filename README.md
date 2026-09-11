@@ -8,6 +8,12 @@
 |---|---|---|
 | 📄 Simplify | FR-2 | Rewrites any contract in plain language at 3 reading levels (Simple / Simpler / Summary) |
 | 🧭 Clause Explorer | — | Builds a grounded clause map with risk levels, source spans, and related-clause links |
+| 📊 Contract Health Score | — | Aggregates clause risk into a transparent 0–100 score with category breakdown and radar chart |
+| 🤝 Negotiation Assistant | — | Drafts a neutral counter-clause for high-risk items, always tied to the original source span |
+| 🌐 Multilingual + Voice | — | Simplifies explanations in English, Hindi, Spanish, Tamil, or Telugu and reads the result aloud in-browser |
+| 🟥🟩 Redline + Audit Export | — | Shows side-by-side contract changes and exports fingerprinted JSON reports with model and grounding metadata |
+| 📚 Reference Pattern Signals | — | Matches clauses against a transparent bundled demo library without unsupported percentile claims |
+| ⚙️ Pipeline + Performance | — | Shows analysis progress and tracks latency, token usage, and session-local cache hits |
 | 🔍 Clause Clarifier | FR-3 | Paste any clause → plain-English explanation + Low/Medium/High risk flag |
 | 🔀 Compare | FR-4 | Two contract versions → clause-by-clause diff with materiality labels |
 | 💬 Ask Questions | FR-8 | Free-form Q&A grounded in your uploaded document (retrieval + Gemini) |
@@ -31,6 +37,13 @@ Optional preview launcher (forges `--port/--host` to Streamlit):
 npm run dev -- --port 7100 --host 127.0.0.1
 ```
 
+Run the Phase 1 and Phase 2 test suite with:
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
 ## Architecture
 
 ```
@@ -48,7 +61,7 @@ All prompts are versioned under [`prompts/`](prompts/):
 
 - `system.md` — role, grounding, refusal, and output contracts
 - `guardrail.md` — legal-vs-non-legal classifier (runs before processing)
-- `simplify.md` / `map.md` / `clarify.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
+- `simplify.md` / `map.md` / `negotiate.md` / `clarify.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
 - Every schema includes `source_span`; `src/grounding.py` verifies each span against the source and the UI flags ungrounded citations instead of hiding them.
 
 ## Deployment

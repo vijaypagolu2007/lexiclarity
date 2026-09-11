@@ -29,6 +29,7 @@ OUTPUT JSON SCHEMA:
       "heading": string,
       "summary": string,
       "risk_level": "Low" | "Medium" | "High",
+      "risk_category": "Financial Risk" | "Termination Risk" | "Liability Exposure" | "Data Privacy",
       "risk_reason": string,
       "source_span": string,
       "related_section_ids": [string]
