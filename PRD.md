@@ -164,7 +164,6 @@ Since this is a **calibration track for the upgraded AI Evaluator**, prompt qual
 - [ ] Live Web App URL — publicly accessible
 - [ ] Public GitHub Repository — **< 10 MB**
 - [ ] Walkthrough Video — **< 4 minutes**, shows live screen testing
-- [ ] Valid submission → **1,000 Prompt Credits guaranteed**
 
 ## 12. Risks & Mitigations
 
@@ -184,4 +183,4 @@ Since this is a **calibration track for the upgraded AI Evaluator**, prompt qual
 - Fine-tuned domain model on Indian contract corpus
 
 ---
-*Prepared on 9 September 2026 for the PromptWars Virtual Exclusive Edition calibration track.*
+*Prepared on 9 September 2026 for PromptWars Virtual.*

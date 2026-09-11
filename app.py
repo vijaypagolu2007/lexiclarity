@@ -1,4 +1,4 @@
-"""LexiClarity — AI for Legal Assistance & Access (PromptWars Virtual 2026).
+"""LexiClarity — AI for Legal Assistance & Access (Hackathon 2026).
 
 Streamlit app implementing FR-1..FR-8 of PRD.md.
 Run:  streamlit run app.py
@@ -223,7 +223,7 @@ def need_key() -> bool:
 # --------------------------------------------------------------------------- UI
 st.title("⚖️ LexiClarity")
 st.markdown("**Understand any legal document in plain language** — simplify, clarify clauses, compare versions. Uploads are processed in memory and never stored.")
-st.caption("PromptWars Virtual 2026 · Hack2skill × Google for Developers")
+st.caption("Hackathon 2026 · AI for Legal Assistance & Access")
 st.warning(DISCLAIMER)
 
 with st.sidebar:
