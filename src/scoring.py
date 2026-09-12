@@ -15,7 +15,9 @@ CATEGORIES = (
     "Data Privacy",
 )
 
-_RISK_PENALTY = {"Low": 5, "Medium": 15, "High": 30}
+# Low-risk clauses are ordinary, balanced terms — they must NOT drag the
+# health score down (a contract of 20 safe clauses should score ~100).
+_RISK_PENALTY = {"Low": 0, "Medium": 10, "High": 25}
 _CATEGORY_HINTS = {
     "Financial Risk": r"rent|fee|payment|deposit|price|cost|fine|penalt|interest|money|charge|invoice",
     "Termination Risk": r"terminat|renew|notice|cancel|expiry|expire|end|early|breach|default",

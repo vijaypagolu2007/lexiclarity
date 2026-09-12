@@ -9,8 +9,22 @@ from __future__ import annotations
 import re
 
 
+_UNICODE_EQUIV = {
+    "“": '"', "”": '"', "„": '"', "«": '"', "»": '"',
+    "‘": "'", "’": "'", "‚": "'",
+    "—": "-", "–": "-", "―": "-",
+    " ": " ", " ": " ", "​": "",
+    "…": "...",
+}
+
+
 def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", (s or "")).strip().lower()
+    """Normalize whitespace, case, and typographic variants so that a model's
+    ASCII-normalized quote still matches a document's curly-quote original."""
+    text = s or ""
+    for src, dst in _UNICODE_EQUIV.items():
+        text = text.replace(src, dst)
+    return re.sub(r"\s+", " ", text).strip().lower()
 
 
 def span_in_document(span: str | None, document: str) -> bool:

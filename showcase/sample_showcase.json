@@ -1,0 +1,259 @@
+{
+  "simplify_summary": {
+    "document_type": "Rental Agreement",
+    "language": "English",
+    "reading_level": "summary",
+    "sections": [
+      {
+        "section_id": "parties-and-premises",
+        "original_heading": "PREMISES",
+        "plain_text": "Parties: Agreement between Mr. Suresh Rao (Landlord) and Ms. Riya Sharma (Tenant) for renting flat No. 3-45, Lotus Enclave, Madhapur, Hyderabad.",
+        "source_span": "This Rental Agreement is made on the 1st day of October 2026 between Mr. Suresh Rao (\"Landlord\"), residing at Hyderabad, Telangana, and Ms. Riya Sharma (\"Tenant\")."
+      },
+      {
+        "section_id": "duration",
+        "original_heading": "TERM",
+        "plain_text": "Duration: 11 months from October 1, 2026 to August 31, 2027. It automatically renews for 11-month periods unless 60 days' written notice is given before expiry.",
+        "source_span": "The tenancy shall commence on 1 October 2026 and continue for a period of eleven (11) months, expiring on 31 August 2027, unless terminated earlier in accordance with this Agreement."
+      },
+      {
+        "section_id": "money",
+        "original_heading": "RENT & SECURITY DEPOSIT",
+        "plain_text": "Money: Rent is Rs. 18,000 monthly (due by the 5th). Security deposit is Rs. 1,08,000. Late payment incurs a 5% monthly compounded fee after the 10th. Rent increases by 8% upon renewal.",
+        "source_span": "The Tenant shall pay a monthly rent of Rs. 18,000 (Rupees Eighteen Thousand only), payable in advance on or before the 5th day of each calendar month."
+      },
+      {
+        "section_id": "termination",
+        "original_heading": "TERMINATION",
+        "plain_text": "Termination: Requires 2 months' notice by either party, but only 15 days' notice by the Landlord for personal use or sale. Leaving within the first 6 months incurs a 2-month rent penalty.",
+        "source_span": "Either party may terminate this Agreement by giving two (2) months' prior written notice."
+      },
+      {
+        "section_id": "riskiest-obligation",
+        "original_heading": "INDEMNITY",
+        "plain_text": "Riskiest Obligation: The Tenant must cover all of the Landlord's claims, losses, damages, and legal fees connected to tenancy, with no maximum limit on liability.",
+        "source_span": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount."
+      }
+    ],
+    "key_terms": [
+      {
+        "term": "Indemnity",
+        "meaning": "An obligation where the tenant agrees to pay for any financial losses, damages, or legal expenses incurred by the landlord due to the tenant's use of the property.",
+        "source_span": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount."
+      },
+      {
+        "term": "Escalation",
+        "meaning": "An automatic increase in the monthly rent amount upon contract renewal.",
+        "source_span": "The rent shall be subject to an escalation of 8% (eight percent) upon each renewal."
+      }
+    ]
+  },
+  "clause_map": {
+    "document_type": "Rental Agreement",
+    "clauses": [
+      {
+        "section_id": "premises",
+        "heading": "1. PREMISES",
+        "summary": "The Landlord rents the residential flat No. 3-45 at Lotus Enclave, Madhapur, Hyderabad, including its fixtures and fittings, to the Tenant.",
+        "risk_level": "Low",
+        "risk_category": "Liability Exposure",
+        "risk_reason": "Standard legal term defining the specific property being rented and included fixtures.",
+        "source_span": "The Landlord hereby lets to the Tenant the residential flat bearing No. 3-45, Lotus Enclave, Madhapur, Hyderabad (\"Premises\"), together with fixtures and fittings listed in Annexure A.",
+        "related_section_ids": []
+      },
+      {
+        "section_id": "term",
+        "heading": "2. TERM",
+        "summary": "The rental period runs for 11 months from 1 October 2026 to 31 August 2027, and automatically renews for another 11 months unless notice is given 60 days before expiration.",
+        "risk_level": "High",
+        "risk_category": "Termination Risk",
+        "risk_reason": "The agreement automatically renews for another 11-month period unless written non-renewal notice is served at least 60 days in advance.",
+        "source_span": "The tenancy shall commence on 1 October 2026 and continue for a period of eleven (11) months, expiring on 31 August 2027, unless terminated earlier in accordance with this Agreement. The Agreement shall stand automatically renewed for successive periods of eleven months unless either party gives written notice of non-renewal at least sixty (60) days prior to expiry.",
+        "related_section_ids": [
+          "rent",
+          "termination"
+        ]
+      },
+      {
+        "section_id": "rent",
+        "heading": "3. RENT",
+        "summary": "The Tenant must pay Rs. 18,000 monthly rent in advance by the 5th of every month, with rent increasing by 8% upon every renewal.",
+        "risk_level": "Medium",
+        "risk_category": "Financial Risk",
+        "risk_reason": "Mandates monthly advance rent payments and an automatic 8% rent increase upon each renewal.",
+        "source_span": "The Tenant shall pay a monthly rent of Rs. 18,000 (Rupees Eighteen Thousand only), payable in advance on or before the 5th day of each calendar month. The rent shall be subject to an escalation of 8% (eight percent) upon each renewal.",
+        "related_section_ids": [
+          "term",
+          "late-payment",
+          "security-deposit"
+        ]
+      },
+      {
+        "section_id": "security-deposit",
+        "heading": "4. SECURITY DEPOSIT",
+        "summary": "The Tenant must provide an interest-free deposit of Rs. 1,08,000, refundable within 30 days of moving out after deductions for unpaid rent, damages, or utilities.",
+        "risk_level": "Medium",
+        "risk_category": "Financial Risk",
+        "risk_reason": "Requires a substantial security deposit upfront subject to deductions by the Landlord upon move-out.",
+        "source_span": "The Tenant shall deposit with the Landlord an interest-free refundable security deposit of Rs. 1,08,000 (Rupees One Lakh Eight Thousand only), refundable within thirty (30) days of vacation of the Premises, after deducting any amounts due for unpaid rent, damages beyond normal wear and tear, or outstanding utility charges.",
+        "related_section_ids": [
+          "rent"
+        ]
+      },
+      {
+        "section_id": "late-payment",
+        "heading": "5. LATE PAYMENT",
+        "summary": "If rent is paid after the 10th of the month, the Tenant must pay a late fee of 5% per month compounded monthly on the unpaid balance.",
+        "risk_level": "High",
+        "risk_category": "Financial Risk",
+        "risk_reason": "Imposes a high late fee penalty of 5% per month compounded monthly on overdue payments.",
+        "source_span": "In the event of delay in payment of rent beyond the 10th day of the month, the Tenant shall be liable to pay a late fee calculated at 5% per month on the outstanding amount, compounded monthly.",
+        "related_section_ids": [
+          "rent"
+        ]
+      },
+      {
+        "section_id": "maintenance-and-repairs",
+        "heading": "6. MAINTENANCE AND REPAIRS",
+        "summary": "The Tenant is responsible for property upkeep and minor repairs under Rs. 5,000 per incident, while the Landlord covers structural repairs. Structural modifications require prior written consent.",
+        "risk_level": "Medium",
+        "risk_category": "Financial Risk",
+        "risk_reason": "Places out-of-pocket financial liability on the Tenant for minor repair costs up to Rs. 5,000 per incident.",
+        "source_span": "The Tenant shall keep the Premises in good order and shall be responsible for all minor repairs up to Rs. 5,000 per incident. Structural repairs shall be the responsibility of the Landlord.",
+        "related_section_ids": []
+      },
+      {
+        "section_id": "termination",
+        "heading": "7. TERMINATION",
+        "summary": "Either party may terminate with 2 months' notice, but the Landlord can give only 15 days' notice if selling or using the property personally. The Tenant owes a 2-month rent penalty for ending the lease in the first 6 months.",
+        "risk_level": "High",
+        "risk_category": "Termination Risk",
+        "risk_reason": "Asymmetrical notice periods favor the Landlord, and the Tenant faces a severe two-month rent penalty for early termination within six months.",
+        "source_span": "Either party may terminate this Agreement by giving two (2) months' prior written notice. However, the Landlord may terminate with only fifteen (15) days' notice in the event the Premises are required for personal use or sale. In the event the Tenant terminates within the first six months, the Tenant shall pay a lock-in penalty equal to two months' rent.",
+        "related_section_ids": [
+          "term",
+          "rent"
+        ]
+      },
+      {
+        "section_id": "indemnity",
+        "heading": "8. INDEMNITY",
+        "summary": "The Tenant agrees to pay for all losses, damages, claims, and legal fees incurred by the Landlord due to the Tenant's occupancy, without any financial cap.",
+        "risk_level": "High",
+        "risk_category": "Liability Exposure",
+        "risk_reason": "Creates uncapped, broad financial liability for the Tenant to cover all claims and legal expenses related to tenancy.",
+        "source_span": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount.",
+        "related_section_ids": []
+      },
+      {
+        "section_id": "inspection",
+        "heading": "9. INSPECTION",
+        "summary": "The Landlord may enter and inspect the premises with 24 hours' notice, or without advance notice in an emergency.",
+        "risk_level": "Low",
+        "risk_category": "Liability Exposure",
+        "risk_reason": "Standard landlord inspection clause requiring reasonable advance notice except in emergency situations.",
+        "source_span": "The Landlord or his agents may enter and inspect the Premises at any reasonable time with 24 hours' prior notice, or without notice in case of emergency.",
+        "related_section_ids": []
+      },
+      {
+        "section_id": "governing-law",
+        "heading": "10. GOVERNING LAW",
+        "summary": "This lease is governed by Indian law, and any legal disputes must be brought before courts in Hyderabad.",
+        "risk_level": "Low",
+        "risk_category": "Liability Exposure",
+        "risk_reason": "Standard boilerplate clause designating local jurisdiction and applicable legal framework.",
+        "source_span": "This Agreement shall be governed by the laws of India, and the courts at Hyderabad shall have exclusive jurisdiction.",
+        "related_section_ids": []
+      }
+    ]
+  },
+  "clarify_indemnity": {
+    "plain_explanation": "This clause means you must pay for any damages, legal fees, or financial losses the landlord experiences because of your stay at the property. You are responsible for covering all associated costs if a dispute or claim arises from your use of the flat. There is no maximum limit on how much money you might have to pay under this rule.",
+    "risk_level": "High",
+    "why_risky": "You accept full liability for all costs and legal fees with no maximum limit on what you could owe.",
+    "watch_out": "There is no limit on the financial amount you could be held responsible for paying.",
+    "source_span": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount."
+  },
+  "compare": {
+    "changes": [
+      {
+        "topic": "Rent and Escalation",
+        "change_type": "modified",
+        "summary": "Monthly rent increases from Rs. 18,000 to Rs. 19,500, and the rent escalation rate upon renewal increases from 8% to 10%, favoring the Landlord.",
+        "materiality": "material",
+        "source_span_a": "The Tenant shall pay a monthly rent of Rs. 18,000 (Rupees Eighteen Thousand only), payable in advance on or before the 5th day of each calendar month. The rent shall be subject to an escalation of 8% (eight percent) upon each renewal.",
+        "source_span_b": "The Tenant shall pay a monthly rent of Rs. 19,500 (Rupees Nineteen Thousand Five Hundred only), payable in advance on or before the 5th day of each calendar month. The rent shall be subject to an escalation of 10% (ten percent) upon each renewal."
+      },
+      {
+        "topic": "Security Deposit",
+        "change_type": "modified",
+        "summary": "Security deposit amount increases from Rs. 1,08,000 to Rs. 1,17,000, and the refund timeframe after vacation extends from 30 days to 90 days, favoring the Landlord.",
+        "materiality": "material",
+        "source_span_a": "The Tenant shall deposit with the Landlord an interest-free refundable security deposit of Rs. 1,08,000 (Rupees One Lakh Eight Thousand only), refundable within thirty (30) days of vacation of the Premises, after deducting any amounts due for unpaid rent, damages beyond normal wear and tear, or outstanding utility charges.",
+        "source_span_b": "The Tenant shall deposit with the Landlord an interest-free refundable security deposit of Rs. 1,17,000 (Rupees One Lakh Seventeen Thousand only), refundable within ninety (90) days of vacation of the Premises, after deducting any amounts due for unpaid rent, damages beyond normal wear and tear, or outstanding utility charges."
+      },
+      {
+        "topic": "Late Payment Fee",
+        "change_type": "modified",
+        "summary": "The late payment fee for delayed rent increases from 5% per month to 10% per month, favoring the Landlord.",
+        "materiality": "material",
+        "source_span_a": "In the event of delay in payment of rent beyond the 10th day of the month, the Tenant shall be liable to pay a late fee calculated at 5% per month on the outstanding amount, compounded monthly.",
+        "source_span_b": "In the event of delay in payment of rent beyond the 10th day of the month, the Tenant shall be liable to pay a late fee calculated at 10% per month on the outstanding amount, compounded monthly."
+      },
+      {
+        "topic": "Termination Notice Period",
+        "change_type": "modified",
+        "summary": "The standard written termination notice period required by either party is reduced from two months to one month.",
+        "materiality": "material",
+        "source_span_a": "Either party may terminate this Agreement by giving two (2) months' prior written notice.",
+        "source_span_b": "Either party may terminate this Agreement by giving one (1) month's prior written notice."
+      },
+      {
+        "topic": "Tenancy Term",
+        "change_type": "unchanged",
+        "summary": "The 11-month tenancy period and 60-day non-renewal notice requirement remain unchanged.",
+        "materiality": "minor",
+        "source_span_a": "The tenancy shall commence on 1 October 2026 and continue for a period of eleven (11) months, expiring on 31 August 2027, unless terminated earlier in accordance with this Agreement.",
+        "source_span_b": "The tenancy shall commence on 1 October 2026 and continue for a period of eleven (11) months, expiring on 31 August 2027, unless terminated earlier in accordance with this Agreement."
+      },
+      {
+        "topic": "Maintenance and Repairs",
+        "change_type": "unchanged",
+        "summary": "Tenant responsibility for minor repairs up to Rs. 5,000 and Landlord responsibility for structural repairs remain unchanged.",
+        "materiality": "minor",
+        "source_span_a": "The Tenant shall keep the Premises in good order and shall be responsible for all minor repairs up to Rs. 5,000 per incident.",
+        "source_span_b": "The Tenant shall keep the Premises in good order and shall be responsible for all minor repairs up to Rs. 5,000 per incident."
+      },
+      {
+        "topic": "Indemnity",
+        "change_type": "unchanged",
+        "summary": "The Tenant's obligation to indemnify the Landlord without financial limitation remains unchanged.",
+        "materiality": "minor",
+        "source_span_a": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount.",
+        "source_span_b": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount."
+      }
+    ],
+    "overall_assessment": "Version A is significantly more favorable to the Tenant (Ms. Riya Sharma) than Version B. The top three material changes in Version B favor the Landlord: higher monthly rent with a greater escalation percentage, an increased security deposit with a longer 90-day return window, and a doubled late payment penalty rate of 10% per month. This comparison is provided for informational purposes only and does not constitute legal advice."
+  },
+  "chat_answers": {
+    "When can the landlord raise the rent?": {
+      "answer": "According to the agreement, the landlord can raise the rent upon each renewal of the contract. When the agreement is renewed, the rent will increase by 8%.",
+      "citations": [
+        "The rent shall be subject to an escalation of 8% (eight percent) upon each renewal."
+      ],
+      "advice_declined": false
+    },
+    "What is the security deposit and when do I get it back?": {
+      "answer": "The security deposit is an interest-free, refundable amount of Rs. 1,08,000. You are entitled to receive it back within thirty (30) days after vacating the premises. However, the landlord may deduct funds for unpaid rent, damages beyond normal wear and tear, or outstanding utility bills before returning the balance.",
+      "citations": [
+        "The Tenant shall deposit with the Landlord an interest-free refundable security deposit of Rs. 1,08,000 (Rupees One Lakh Eight Thousand only), refundable within thirty (30) days of vacation of the Premises, after deducting any amounts due for unpaid rent, damages beyond normal wear and tear, or outstanding utility charges."
+      ],
+      "advice_declined": false
+    },
+    "Can I keep a pet dog in the apartment?": {
+      "answer": "The document does not address this.",
+      "citations": [],
+      "advice_declined": false
+    }
+  }
+}

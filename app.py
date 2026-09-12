@@ -31,6 +31,30 @@ DISCLAIMER = "ℹ️ **Informational only — not legal advice.** LexiClarity ex
 RISK_COLOR = {"Low": "#2e7d32", "Medium": "#f9a825", "High": "#c62828"}
 MAX_DOC_CHARS = 120_000
 SAMPLE_PATH = Path(__file__).resolve().parent / "samples" / "sample_rental_agreement.txt"
+SAMPLE_B_PATH = Path(__file__).resolve().parent / "samples" / "sample_rental_agreement_revised.txt"
+SHOWCASE_PATH = Path(__file__).resolve().parent / "showcase" / "sample_showcase.json"
+
+
+def load_showcase() -> dict | None:
+    """Pre-computed grounded outputs for the bundled sample (Offline Showcase Mode)."""
+    try:
+        return json.loads(SHOWCASE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def showcase_for(doc: str | None) -> dict | None:
+    """Return showcase data when no API key is set and `doc` is the bundled sample."""
+    if api_key_configured() or not doc:
+        return None
+    sample = st.session_state.get("sample_document")
+    if sample and document_id(doc) == document_id(sample):
+        return load_showcase()
+    return None
+
+
+def showcase_badge() -> None:
+    st.info("⚡ **Instant Demo Showcase Mode** — pre-computed, source-grounded analysis of the bundled sample agreement. No API key needed; upload behavior is identical with a key configured.")
 
 
 # --------------------------------------------------------------------------- helpers
@@ -158,7 +182,7 @@ def render_radar_chart(scores: dict[str, int]) -> None:
         for i in range(len(CATEGORIES))
     )
     labels = "".join(
-        f"<text x='{center + (radius + 28) * math.cos(-math.pi / 2 + 2 * math.pi * i / len(CATEGORIES)):.1f}' y='{center + (radius + 28) * math.sin(-math.pi / 2 + 2 * math.pi * i / len(CATEGORIES)):.1f}' text-anchor='middle' dominant-baseline='middle' fill='#334155' font-size='11'>{html.escape(category.replace(' Risk', '').replace(' Exposure', ''))}</text>"
+        f"<text x='{center + (radius + 28) * math.cos(-math.pi / 2 + 2 * math.pi * i / len(CATEGORIES)):.1f}' y='{center + (radius + 28) * math.sin(-math.pi / 2 + 2 * math.pi * i / len(CATEGORIES)):.1f}' text-anchor='middle' dominant-baseline='middle' fill='#7c8aa0' font-size='11'>{html.escape(category.replace(' Risk', '').replace(' Exposure', ''))}</text>"
         for i, category in enumerate(CATEGORIES)
     )
     values = " ".join(str(scores.get(category, 0)) for category in CATEGORIES)
@@ -175,16 +199,32 @@ def render_radar_chart(scores: dict[str, int]) -> None:
 
 
 def render_speech_button(text: str, language: str) -> None:
-    """Add a browser-native text-to-speech control without storing audio."""
-    speech_text = json.dumps(text[:12_000], ensure_ascii=False)
-    speech_language = json.dumps(speech_locale(language))
+    """Add a browser-native text-to-speech control without storing audio.
+
+    The payload is embedded as JSON inside a <script> block (never inside an
+    HTML attribute), so quotes/apostrophes in the text cannot break out or
+    inject markup. "</script>" is escaped defensively.
+    """
+    speech_text = json.dumps(text[:12_000], ensure_ascii=False).replace("</", "<\\/")
+    speech_language = json.dumps(speech_locale(language)).replace("</", "<\\/")
     st.components.v1.html(
         f"""
-        <button type='button' aria-label='Listen to simplified summary'
-          style='padding:0.55rem 0.8rem;border:1px solid #94a3b8;border-radius:0.4rem;background:#f8fafc;cursor:pointer'
-          onclick='window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance({speech_text}); u.lang = {speech_language}; window.speechSynthesis.speak(u);'>
+        <button type='button' aria-label='Listen to simplified summary' id='lc-tts-btn'
+          style='padding:0.55rem 0.8rem;border:1px solid #94a3b8;border-radius:0.4rem;background:#f8fafc;cursor:pointer'>
           🔊 Listen to summary
         </button>
+        <script>
+          (function() {{
+            var text = {speech_text};
+            var lang = {speech_language};
+            document.getElementById('lc-tts-btn').addEventListener('click', function() {{
+              window.speechSynthesis.cancel();
+              var u = new SpeechSynthesisUtterance(text);
+              u.lang = lang;
+              window.speechSynthesis.speak(u);
+            }});
+          }})();
+        </script>
         """,
         height=54,
     )
@@ -213,8 +253,9 @@ def render_redline(document_a: str, document_b: str) -> None:
 def need_key() -> bool:
     if not api_key_configured():
         st.info(
-            "🔑 No Gemini API key configured. Set `GEMINI_API_KEY` as an environment variable "
-            "(or in `.streamlit/secrets.toml`) and reload. The upload/extraction pipeline works without a key."
+            "🔑 No Gemini API key configured — live AI features are paused, but you can still explore: "
+            "click **Load sample rental agreement** in the sidebar for instant pre-computed analysis (Showcase Mode). "
+            "Set `GEMINI_API_KEY` to analyze your own documents."
         )
         return False
     return True
@@ -240,6 +281,15 @@ with st.sidebar:
             st.error(f"Could not load the sample: {e}")
     if st.session_state.get("sample_document"):
         st.info(f"Sample available: {st.session_state.get('sample_name', 'sample document')}")
+    if st.button("Load sample pair (Compare tab)", use_container_width=True):
+        try:
+            st.session_state.sample_pair_a = SAMPLE_PATH.read_text(encoding="utf-8")
+            st.session_state.sample_pair_b = SAMPLE_B_PATH.read_text(encoding="utf-8")
+            st.success("Sample pair loaded. Open Compare Contracts.")
+        except OSError as e:
+            st.error(f"Could not load the sample pair: {e}")
+    if not api_key_configured() and load_showcase():
+        st.caption("⚡ Showcase Mode available: load the sample and explore every tab without an API key.")
     st.divider()
     metrics = st.session_state.get("task_metrics", [])
     if metrics:
@@ -272,8 +322,12 @@ with mode[0]:
             ["English", "Hindi", "Spanish", "Tamil", "Telugu"],
             help="Explanations are translated; source citations remain verbatim in the document's original language.",
         )
-        if st.button("✨ Simplify", type="primary", disabled=not api_key_configured()):
-            if guardrail(doc) is None:
+        showcase = showcase_for(doc)
+        if st.button("✨ Simplify", type="primary", disabled=not (api_key_configured() or showcase)):
+            if showcase:
+                showcase_badge()
+                out = showcase["simplify_summary"]
+            elif guardrail(doc) is None:
                 with st.spinner("Simplifying with citations…"):
                     try:
                         out = tracked_task(
@@ -285,6 +339,9 @@ with mode[0]:
                     except LLMError as e:
                         st.error(str(e))
                         st.stop()
+            else:
+                out = None
+            if out is not None:
                 sections = check_items(out.get("sections", []), doc)
                 rate = grounded_rate(sections)
                 if rate >= 0.8:
@@ -309,6 +366,13 @@ with mode[0]:
                 st.download_button("⬇️ Export simplified (Markdown)",  # FR-11
                                    data="\n\n".join(f"## {s.get('original_heading')}\n\n{s.get('plain_text')}" for s in sections),
                                    file_name="lexiclarity_simplified.md", mime="text/markdown")
+                try:
+                    from src.pdf_export import build_simplified_pdf
+                    pdf_bytes = build_simplified_pdf(out.get("document_type", "legal document"), level, sections)
+                    st.download_button("⬇️ Export simplified (PDF)", pdf_bytes,
+                                       file_name="lexiclarity_simplified.pdf", mime="application/pdf")
+                except Exception as e:
+                    st.caption(f"PDF export unavailable ({e}); use the Markdown export instead.")
                 st.warning(DISCLAIMER)
 
 # ------------------------------------------------------------- TAB 2: Clause Explorer
@@ -318,13 +382,18 @@ with mode[1]:
     doc = read_upload_or_sample("Upload a document", "up_explorer")
     if doc:
         set_active_document("explorer_document_id", doc)
-        if st.button("🧭 Build clause map", type="primary", disabled=not api_key_configured()):
-            with st.spinner("Mapping clauses and relationships…"):
-                try:
-                    out = tracked_task("map", f"document_text:\n{truncate(doc)}")
-                except LLMError as e:
-                    st.error(str(e))
-                    st.stop()
+        showcase = showcase_for(doc)
+        if st.button("🧭 Build clause map", type="primary", disabled=not (api_key_configured() or showcase)):
+            if showcase:
+                showcase_badge()
+                out = showcase["clause_map"]
+            else:
+                with st.spinner("Mapping clauses and relationships…"):
+                    try:
+                        out = tracked_task("map", f"document_text:\n{truncate(doc)}")
+                    except LLMError as e:
+                        st.error(str(e))
+                        st.stop()
             clauses = check_items(out.get("clauses", []), doc)
             valid_ids = {c.get("section_id") for c in clauses}
             for clause in clauses:
@@ -356,6 +425,32 @@ with mode[1]:
             with chart_col:
                 st.markdown("**Risk category profile**")
                 render_radar_chart(health["category_scores"])
+            # FR-13: "Explain like I'm signing this today" one-tap summary card,
+            # derived from the grounded clause map (no extra model call).
+            st.markdown("### 🖊️ Signing today? Read this first")
+            good = [c for c in clauses if c.get("risk_level") == "Low"][:3]
+            watchouts = [c for c in clauses if c.get("risk_level") == "Medium"][:3]
+            dealbreakers = [c for c in clauses if c.get("risk_level") == "High"][:3]
+            card_good, card_watch, card_bad = st.columns(3)
+            with card_good:
+                st.markdown("🟢 **The Good**")
+                for c in good:
+                    st.caption(f"• {c.get('heading', 'Clause')} — {c.get('summary', '')[:120]}")
+                if not good:
+                    st.caption("No clearly favorable clauses found.")
+            with card_watch:
+                st.markdown("🟡 **The Watchouts**")
+                for c in watchouts:
+                    st.caption(f"• {c.get('heading', 'Clause')} — {c.get('summary', '')[:120]}")
+                if not watchouts:
+                    st.caption("No medium-risk obligations found.")
+            with card_bad:
+                st.markdown("🔴 **The Dealbreakers**")
+                for c in dealbreakers:
+                    st.caption(f"• {c.get('heading', 'Clause')} — {c.get('summary', '')[:120]}")
+                if not dealbreakers:
+                    st.caption("No high-risk clauses found.")
+            st.caption("Informational summary only — not legal advice.")
             clause_by_id = {c.get("section_id"): c for c in clauses}
             st.markdown("**Reference pattern signals**")
             st.caption("Demo library matches only; this is not a statistical or legal benchmark.")
@@ -447,13 +542,26 @@ with mode[2]:
         set_active_document("clarify_document_id", doc)
         clause = st.text_area("Paste the clause you want explained (or copy it from your document):",
                               height=150, placeholder="e.g. The Tenant shall pay a late fee of 5% per month…")
-        if st.button("🔍 Clarify clause", type="primary", disabled=not (clause and api_key_configured())):
-            with st.spinner("Analyzing clause…"):
-                try:
-                    out = tracked_task("clarify", f"clause_text:\n{clause}\n\ndocument_text:\n{truncate(doc, 60_000)}")
-                except LLMError as e:
-                    st.error(str(e))
-                    st.stop()
+        showcase = showcase_for(doc)
+        if showcase and not clause:
+            st.caption("⚡ Showcase tip: paste the sample's **Clause 8 (Indemnity)** to see an instant pre-computed analysis.")
+        if st.button("🔍 Clarify clause", type="primary", disabled=not (clause and (api_key_configured() or showcase))):
+            if showcase:
+                if "indemnif" in clause.lower():
+                    showcase_badge()
+                    out = showcase["clarify_indemnity"]
+                else:
+                    st.info("⚡ Showcase Mode covers the sample's Clause 8 (Indemnity). Set a Gemini API key to clarify any clause.")
+                    out = None
+            else:
+                with st.spinner("Analyzing clause…"):
+                    try:
+                        out = tracked_task("clarify", f"clause_text:\n{clause}\n\ndocument_text:\n{truncate(doc, 60_000)}")
+                    except LLMError as e:
+                        st.error(str(e))
+                        st.stop()
+            if out is None:
+                st.stop()
             risk = out.get("risk_level", "Medium")
             color = RISK_COLOR.get(risk, "#f9a825")
             st.markdown(f"**Risk level:** <span style='color:{color};font-weight:700'>● {risk}</span> — {out.get('why_risky','')}",
@@ -472,15 +580,31 @@ with mode[3]:
         doc_a = read_upload("Version A (e.g. original)", "up_a")
     with c2:
         doc_b = read_upload("Version B (e.g. revised)", "up_b")
+    if not doc_a and st.session_state.get("sample_pair_a"):
+        st.caption("✅ Sample Version A loaded (original rental agreement).")
+        doc_a = st.session_state.sample_pair_a
+    if not doc_b and st.session_state.get("sample_pair_b"):
+        st.caption("✅ Sample Version B loaded (landlord-friendlier revision).")
+        doc_b = st.session_state.sample_pair_b
     if doc_a and doc_b:
         set_active_document("compare_document_id", f"{doc_a}\n---VERSION-B---\n{doc_b}")
-        if st.button("🔀 Compare", type="primary", disabled=not api_key_configured()):
-            with st.spinner("Comparing clause-by-clause…"):
-                try:
-                    out = tracked_task("compare", f"document_a:\n{truncate(doc_a, 60_000)}\n\ndocument_b:\n{truncate(doc_b, 60_000)}")
-                except LLMError as e:
-                    st.error(str(e))
-                    st.stop()
+        is_sample_pair = (
+            st.session_state.get("sample_pair_a")
+            and document_id(doc_a) == document_id(st.session_state.sample_pair_a)
+            and document_id(doc_b) == document_id(st.session_state.get("sample_pair_b", ""))
+        )
+        showcase = load_showcase() if (not api_key_configured() and is_sample_pair) else None
+        if st.button("🔀 Compare", type="primary", disabled=not (api_key_configured() or showcase)):
+            if showcase:
+                showcase_badge()
+                out = showcase["compare"]
+            else:
+                with st.spinner("Comparing clause-by-clause…"):
+                    try:
+                        out = tracked_task("compare", f"document_a:\n{truncate(doc_a, 60_000)}\n\ndocument_b:\n{truncate(doc_b, 60_000)}")
+                    except LLMError as e:
+                        st.error(str(e))
+                        st.stop()
             changes = out.get("changes", [])
             icon = {"added": "🟢", "deleted": "🔴", "modified": "🟡", "unchanged": "⚪"}
             st.markdown(f"**{len(changes)}** clauses analyzed · "
@@ -534,16 +658,30 @@ with mode[4]:
                 st.markdown(turn["content"])
                 for span in turn.get("citations", []):
                     cite(span, doc)
-        q = st.chat_input("e.g. When can the landlord raise the rent?", disabled=not api_key_configured())
+        showcase = showcase_for(doc)
+        if showcase:
+            showcase_badge()
+            st.caption("Showcase Mode answers these pre-computed questions about the sample:")
+            q = None
+            for sample_q in showcase.get("chat_answers", {}):
+                if st.button(f"💬 {sample_q}", key=f"showcase_q_{hashlib.sha256(sample_q.encode()).hexdigest()[:10]}"):
+                    q = sample_q
+        else:
+            q = st.chat_input("e.g. When can the landlord raise the rent?", disabled=not api_key_configured())
         if q:
             st.session_state.chat_history.append({"role": "user", "content": q})
-            with st.spinner("Thinking…"):
-                chunks = retrieve(q, doc, k=5)
-                try:
-                    out = tracked_task("chat", f"question: {q}\n\ncontext_chunks:\n{json.dumps(chunks, ensure_ascii=False)}\n\ndocument_text:\n{truncate(doc, 60_000)}")
-                except LLMError as e:
-                    st.error(str(e))
+            if showcase:
+                out = showcase.get("chat_answers", {}).get(q)
+                if out is None:
                     st.stop()
+            else:
+                with st.spinner("Thinking…"):
+                    chunks = retrieve(q, doc, k=5)
+                    try:
+                        out = tracked_task("chat", f"question: {q}\n\ncontext_chunks:\n{json.dumps(chunks, ensure_ascii=False)}\n\ndocument_text:\n{truncate(doc, 60_000)}")
+                    except LLMError as e:
+                        st.error(str(e))
+                        st.stop()
             answer = out.get("answer", "")
             if out.get("advice_declined"):
                 answer += "\n\n*I can explain what the document says, but I can't give legal advice — please consult a qualified lawyer.*"

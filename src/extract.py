@@ -5,6 +5,7 @@ Everything runs in-memory; nothing is written to disk (PRD §6 privacy).
 from __future__ import annotations
 
 import io
+import re
 
 
 class ExtractionError(Exception):
@@ -49,13 +50,37 @@ def _from_pdf(data: bytes) -> str:
 def _from_docx(data: bytes) -> str:
     try:
         import docx
+        from docx.document import Document as _Doc
+        from docx.table import Table
+        from docx.text.paragraph import Paragraph
     except ImportError as e:  # pragma: no cover
         raise ExtractionError("DOCX support is not installed (python-docx).") from e
     try:
         doc = docx.Document(io.BytesIO(data))
     except Exception as e:
         raise ExtractionError("This DOCX file could not be read — it may be corrupted.") from e
-    text = "\n".join(p.text for p in doc.paragraphs if p.text.strip()).strip()
+
+    # Walk the document body in order so TABLES are preserved alongside
+    # paragraphs — contracts keep rent, deposits and fee schedules in tables.
+    def _table_text(table) -> str:
+        rows = []
+        for row in table.rows:
+            cells = [re.sub(r"\s+", " ", c.text).strip() for c in row.cells]
+            if any(cells):
+                rows.append(" | ".join(cells))
+        return "\n".join(rows)
+
+    parts: list[str] = []
+    for child in doc.element.body.iterchildren():
+        if child.tag.endswith("}p"):
+            para = Paragraph(child, doc)
+            if para.text.strip():
+                parts.append(para.text.strip())
+        elif child.tag.endswith("}tbl"):
+            tbl = _table_text(Table(child, doc))
+            if tbl:
+                parts.append(tbl)
+    text = "\n".join(parts).strip()
     if len(text) < 20:
         raise ExtractionError("No readable text found in this DOCX file.")
     return text
