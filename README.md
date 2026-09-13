@@ -41,7 +41,7 @@ Run the Phase 1 and Phase 2 test suite with:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q
+python -m pytest -q
 ```
 
 ## Architecture

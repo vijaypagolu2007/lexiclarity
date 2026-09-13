@@ -195,7 +195,7 @@ def render_radar_chart(scores: dict[str, int]) -> None:
       </svg>
     </div>
     """
-    st.components.v1.html(svg, height=300)
+    st.html(svg)
 
 
 def render_speech_button(text: str, language: str) -> None:
@@ -207,7 +207,7 @@ def render_speech_button(text: str, language: str) -> None:
     """
     speech_text = json.dumps(text[:12_000], ensure_ascii=False).replace("</", "<\\/")
     speech_language = json.dumps(speech_locale(language)).replace("</", "<\\/")
-    st.components.v1.html(
+    st.html(
         f"""
         <button type='button' aria-label='Listen to simplified summary' id='lc-tts-btn'
           style='padding:0.55rem 0.8rem;border:1px solid #94a3b8;border-radius:0.4rem;background:#f8fafc;cursor:pointer'>
@@ -225,8 +225,7 @@ def render_speech_button(text: str, language: str) -> None:
             }});
           }})();
         </script>
-        """,
-        height=54,
+        """
     )
 
 

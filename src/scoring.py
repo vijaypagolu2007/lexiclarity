@@ -15,9 +15,11 @@ CATEGORIES = (
     "Data Privacy",
 )
 
-# Low-risk clauses are ordinary, balanced terms — they must NOT drag the
-# health score down (a contract of 20 safe clauses should score ~100).
-_RISK_PENALTY = {"Low": 0, "Medium": 10, "High": 25}
+# Scoring specification (kept in sync with tests/test_scoring.py):
+#   Low    = 0  — ordinary, balanced terms must NOT drag the score down
+#   Medium = 15 — obligations worth attention
+#   High   = 30 — dealbreaker-level risk
+_RISK_PENALTY = {"Low": 0, "Medium": 15, "High": 30}
 _CATEGORY_HINTS = {
     "Financial Risk": r"rent|fee|payment|deposit|price|cost|fine|penalt|interest|money|charge|invoice",
     "Termination Risk": r"terminat|renew|notice|cancel|expiry|expire|end|early|breach|default",
