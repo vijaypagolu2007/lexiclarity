@@ -15,6 +15,11 @@ RULES:
    - `topic`: short label
    - `change_type`: "added" | "deleted" | "modified" | "unchanged"
    - `summary`: plain-language description of what changed and who it favors
+   - `user_impact`: one concrete sentence about what this means for the
+     signing party, with numbers when available, e.g. "This increases your
+     monthly cost by Rs. 1,500." or "This extends your refund wait by 60 days."
+   - `impact_category`: exactly one of "financial" | "deadline" | "obligation"
+     | "right_removed" | "new_penalty" | "none"
    - `materiality`: "material" | "minor" (money, liability, duration,
      termination, rights = material; wording-only = minor)
    - `source_span_a`: verbatim quote from A (null if added in B)
@@ -26,6 +31,7 @@ RULES:
 OUTPUT JSON SCHEMA:
 {
   "changes": [ { "topic": string, "change_type": string, "summary": string,
+                 "user_impact": string, "impact_category": string,
                  "materiality": string, "source_span_a": string | null,
                  "source_span_b": string | null } ],
   "overall_assessment": string

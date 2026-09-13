@@ -16,6 +16,8 @@ import re
 import time
 from pathlib import Path
 
+import httpx
+
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
@@ -57,7 +59,10 @@ def _parse_json(raw: str) -> dict:
     text = raw.strip()
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.MULTILINE).strip()
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            raise LLMError("Model returned JSON, but the top-level value was not an object.")
+        return parsed
     except json.JSONDecodeError as e:
         raise LLMError(f"Model returned invalid JSON: {e}") from e
 
@@ -95,8 +100,10 @@ def run_task(prompt_name: str, payload: str, client=None) -> dict:
         return parsed
     except LLMError:
         raise
-    except Exception as e:
-        raise LLMError(f"Gemini request failed: {e}") from e
+    except (httpx.HTTPError, TimeoutError, ConnectionError, OSError) as e:
+        raise LLMError("Gemini request failed because the network connection was unavailable.") from e
+    except (ValueError, TypeError, AttributeError) as e:
+        raise LLMError("Gemini returned an unusable response.") from e
 
 
 def last_metrics() -> dict:
@@ -115,5 +122,5 @@ def load_secrets_into_env() -> None:
         key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
         if key and not api_key_configured():
             os.environ["GEMINI_API_KEY"] = key
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
         pass

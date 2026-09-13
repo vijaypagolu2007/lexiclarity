@@ -19,7 +19,7 @@ def extract_text(filename: str, data: bytes) -> str:
         return _from_pdf(data)
     if name.endswith(".docx"):
         return _from_docx(data)
-    if name.endswith((".txt", ".md", ".text")) or _looks_like_text(data):
+    if name.endswith((".txt", ".md", ".text")):
         return _from_txt(data)
     raise ExtractionError(
         f"Unsupported file type for '{filename}'. Please upload a PDF, DOCX, or TXT file."

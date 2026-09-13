@@ -76,6 +76,21 @@ def main() -> None:
         data["compare"] = call("compare", "compare", f"document_a:\n{doc_a}\n\ndocument_b:\n{doc_b}")
         _save()
 
+    if "next_steps_indemnity" not in data:
+        data["next_steps_indemnity"] = call(
+            "next_steps", "next_steps",
+            "clause_heading: 8. Indemnity\n"
+            "risk_reason: Unlimited indemnity with no cap, tenant bears all legal fees.\n"
+            "clause_text:\nThe Tenant shall indemnify and hold harmless the Landlord from and against any and all "
+            "claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the "
+            "Tenant's use or occupation of the Premises, without any limitation as to amount."
+            f"\n\ndocument_text:\n{doc_a}",
+        )
+        _save()
+    if "lawyer_prep" not in data:
+        data["lawyer_prep"] = call("lawyer_prep", "lawyer_prep", f"document_text:\n{doc_a}")
+        _save()
+
     chat_qa = data.setdefault("chat_answers", {})
     for q in (
         "When can the landlord raise the rent?",

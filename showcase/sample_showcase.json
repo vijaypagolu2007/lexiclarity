@@ -255,5 +255,155 @@
       "citations": [],
       "advice_declined": false
     }
+  },
+  "next_steps_indemnity": {
+    "what_it_means": "This clause requires the tenant to pay for all financial losses, damages, and legal fees the landlord incurs related to the tenant's use of the property. It explicitly states that there is no limit on the amount of money the tenant could be required to pay.",
+    "why_it_matters": "The tenant takes on full financial responsibility for legal claims or damages connected to their stay. Because there is no maximum limit, an unforeseen incident could result in overwhelming out-of-pocket costs.",
+    "who_is_affected": "The Tenant (Ms. Riya Sharma) bears all the risk and financial burden, while the Landlord (Mr. Suresh Rao) benefits from total protection.",
+    "what_could_happen": "If an incident occurs on the property resulting in significant damage or legal claims, the tenant could be required to pay unlimited legal fees and financial damages out of pocket.",
+    "questions_to_ask": [
+      "Can we limit this clause so the tenant is only responsible for damages caused by the tenant's own negligence or fault?",
+      "Can we place a reasonable maximum dollar cap on the total liability, such as the value of the security deposit or contract value?",
+      "Does the landlord maintain property insurance that covers third-party liability claims on the premises?"
+    ],
+    "negotiation_options": [
+      "Propose adding a financial cap to limit total liability to a specific amount or to the security deposit.",
+      "Request modifying the text so indemnity only applies to losses caused by the tenant's deliberate actions or negligence.",
+      "Add a clause requiring the landlord to first seek recovery through standard property insurance."
+    ],
+    "when_to_consult_a_lawyer": "Consult a lawyer before signing if the landlord refuses to add a reasonable financial cap or limit the indemnity to tenant negligence.",
+    "confidence": "high",
+    "evidence_type": "directly_stated",
+    "source_span": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount."
+  },
+  "lawyer_prep": {
+    "case_summary": "This document is an 11-month residential rental agreement for a flat in Madhapur, Hyderabad, between Mr. Suresh Rao (Landlord) and Ms. Riya Sharma (Tenant). It outlines terms regarding monthly rent, security deposit, maintenance duties, and automatic renewal. The single most important item a lawyer should review first is Clause 7 and Clause 8 regarding the unequal notice periods for termination and the tenant's unlimited indemnity liability.",
+    "parties": [
+      {
+        "name": "Mr. Suresh Rao",
+        "role": "Landlord",
+        "responsibilities": "Responsible for structural repairs, providing 24 hours' notice for non-emergency inspections, and refunding the security deposit within 30 days of premises vacation."
+      },
+      {
+        "name": "Ms. Riya Sharma",
+        "role": "Tenant",
+        "responsibilities": "Responsible for paying monthly rent by the 5th, funding an interest-free deposit, covering minor repairs up to Rs. 5,000 per incident, and indemnifying the landlord without limit."
+      }
+    ],
+    "important_dates": [
+      {
+        "date_or_trigger": "1 October 2026",
+        "what_happens": "Tenancy commences."
+      },
+      {
+        "date_or_trigger": "5th day of each calendar month",
+        "what_happens": "Monthly rent payment due date."
+      },
+      {
+        "date_or_trigger": "10th day of each calendar month",
+        "what_happens": "Threshold after which late fees (5% per month compounded) begin accruing on unpaid rent."
+      },
+      {
+        "date_or_trigger": "At least sixty (60) days prior to 31 August 2027",
+        "what_happens": "Deadline for either party to give written notice of non-renewal to prevent automatic extension."
+      },
+      {
+        "date_or_trigger": "31 August 2027",
+        "what_happens": "Initial 11-month tenancy term expires."
+      }
+    ],
+    "financial_obligations": [
+      {
+        "item": "Monthly Rent",
+        "amount": "Rs. 18,000",
+        "due": "In advance on or before the 5th day of each calendar month",
+        "source_span": "The Tenant shall pay a monthly rent of Rs. 18,000 (Rupees Eighteen Thousand only), payable in advance on or before the 5th day of each calendar month."
+      },
+      {
+        "item": "Security Deposit",
+        "amount": "Rs. 1,08,000",
+        "due": "At agreement execution / commencement",
+        "source_span": "The Tenant shall deposit with the Landlord an interest-free refundable security deposit of Rs. 1,08,000 (Rupees One Lakh Eight Thousand only), refundable within thirty (30) days of vacation of the Premises"
+      },
+      {
+        "item": "Late Payment Fee",
+        "amount": "5% per month, compounded monthly",
+        "due": "Upon delay of rent payment beyond the 10th day of the month",
+        "source_span": "In the event of delay in payment of rent beyond the 10th day of the month, the Tenant shall be liable to pay a late fee calculated at 5% per month on the outstanding amount, compounded monthly."
+      },
+      {
+        "item": "Lock-in Penalty",
+        "amount": "Two months' rent",
+        "due": "If Tenant terminates agreement within the first six months",
+        "source_span": "In the event the Tenant terminates within the first six months, the Tenant shall pay a lock-in penalty equal to two months' rent."
+      }
+    ],
+    "top_risks": [
+      {
+        "risk": "Asymmetrical Termination Notice",
+        "why": "The Landlord can terminate the agreement with only 15 days' notice for personal use or sale, whereas the Tenant is required to give 2 months' notice.",
+        "source_span": "However, the Landlord may terminate with only fifteen (15) days' notice in the event the Premises are required for personal use or sale."
+      },
+      {
+        "risk": "Uncapped Indemnity Liability",
+        "why": "The Tenant must cover all claims, losses, and legal costs arising from use of the property with no financial limit.",
+        "source_span": "The Tenant shall indemnify and hold harmless the Landlord from and against any and all claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the Tenant's use or occupation of the Premises, without any limitation as to amount."
+      },
+      {
+        "risk": "Early Termination Penalty for Tenant",
+        "why": "If the Tenant needs to move out during the first six months, they must pay a severe penalty equal to two months' rent.",
+        "source_span": "In the event the Tenant terminates within the first six months, the Tenant shall pay a lock-in penalty equal to two months' rent."
+      }
+    ],
+    "missing_or_ambiguous": [
+      "Specific delivery methods and addresses for official written notices.",
+      "Details or inventory list of fixtures and fittings referenced in Annexure A.",
+      "Bank account details and mode of payment for monthly rent and deposit refund.",
+      "Dispute resolution mechanisms prior to filing court cases in Hyderabad."
+    ],
+    "questions_for_lawyer": [
+      "Under Clause 7, can we negotiate equal termination notice periods so the Landlord cannot evict the Tenant on 15 days' notice?",
+      "Under Clause 8, is it possible to limit or cap the Tenant's indemnity liability, or limit it strictly to negligence?",
+      "Under Clause 2 and 3, does the 8% rent escalation apply automatically upon renewal without needing a freshly signed agreement?",
+      "Under Clause 4, how can we clearly define 'normal wear and tear' to ensure full refund of the Rs. 1,08,000 security deposit?",
+      "In Clause 5, is a 5% monthly compounded late fee enforceable or legally excessive under local tenancy norms?"
+    ],
+    "documents_to_bring": [
+      "Annexure A (inventory list of fixtures and fittings)",
+      "Payment receipts or bank transaction records for deposit and rent",
+      "Written correspondence or email communications between Landlord and Tenant",
+      "Government identification cards (e.g., Aadhaar/PAN) of the parties"
+    ],
+    "timeline": [
+      {
+        "when": "1 October 2026",
+        "event": "Tenancy commences."
+      },
+      {
+        "when": "5th of each month",
+        "event": "Monthly rent payment due."
+      },
+      {
+        "when": "10th of each month",
+        "event": "Compounded 5% late fee applies if rent remains unpaid."
+      },
+      {
+        "when": "1 Oct 2026 – 31 Mar 2027",
+        "event": "First six months lock-in period (Tenant penalty applies for early termination)."
+      },
+      {
+        "when": "July 2027 (60 days before expiry)",
+        "event": "Deadline to give written notice of non-renewal."
+      },
+      {
+        "when": "31 August 2027",
+        "event": "Initial 11-month lease expires; auto-renews unless non-renewal notice was given."
+      },
+      {
+        "when": "Within 30 days of vacating",
+        "event": "Landlord must refund security deposit after allowable deductions."
+      }
+    ],
+    "confidence": "high"
   }
 }

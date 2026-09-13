@@ -16,7 +16,10 @@ RULES:
 3. `why_risky`: one line, plain English, no jargon.
 4. `watch_out`: the single most important thing to notice, or null.
 5. `source_span`: verbatim quote from clause_text that carries the risk.
-6. Self-verification (MANDATORY before answering): re-read your explanation
+6. `confidence`: "high" | "medium" | "low".
+7. `evidence_type`: "directly_stated" (the clause says it explicitly) |
+   "strongly_inferred" (clear implication) | "needs_verification".
+8. Self-verification (MANDATORY before answering): re-read your explanation
    and confirm every statement appears in the clause text. If any statement
    is not grounded, remove it.
 
@@ -26,5 +29,7 @@ OUTPUT JSON SCHEMA:
   "risk_level": "Low" | "Medium" | "High",
   "why_risky": string,
   "watch_out": string | null,
+  "confidence": string,
+  "evidence_type": string,
   "source_span": string
 }

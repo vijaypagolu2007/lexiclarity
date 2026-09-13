@@ -57,6 +57,39 @@ def showcase_badge() -> None:
     st.info("⚡ **Instant Demo Showcase Mode** — pre-computed, source-grounded analysis of the bundled sample agreement. No API key needed; upload behavior is identical with a key configured.")
 
 
+_EVIDENCE_LABEL = {
+    "directly_stated": "🟢 Directly stated in the document",
+    "strongly_inferred": "🟡 Strongly inferred from the document",
+    "needs_verification": "🟠 Needs verification",
+}
+
+
+def evidence_badge(out: dict) -> None:
+    """Confidence + evidence transparency for any model output (tolerates missing fields)."""
+    parts = []
+    if out.get("evidence_type") in _EVIDENCE_LABEL:
+        parts.append(_EVIDENCE_LABEL[out["evidence_type"]])
+    if out.get("confidence"):
+        parts.append(f"Confidence: **{out['confidence']}**")
+    if parts:
+        st.caption(" · ".join(parts))
+
+
+def smart_disclaimer(clauses: list[dict]) -> None:
+    """Context-aware disclaimer: escalates when high-risk clauses are present."""
+    high = [c for c in clauses if c.get("risk_level") == "High"]
+    if high:
+        first = high[0].get("heading", "a high-risk clause")
+        st.warning(
+            f"⚠️ This document contains **{len(high)} high-risk clause(s)**, including **{first}**. "
+            "Because this may create significant financial or legal exposure, consider consulting a "
+            "qualified lawyer before signing. LexiClarity provides explanations and risk signals — "
+            "not legal advice."
+        )
+    else:
+        st.warning(DISCLAIMER)
+
+
 # --------------------------------------------------------------------------- helpers
 def truncate(text: str, limit: int = MAX_DOC_CHARS) -> str:
     return text if len(text) <= limit else text[:limit] + "\n\n[...document truncated for length...]"
@@ -306,7 +339,7 @@ with st.sidebar:
 if not api_key_configured():
     need_key()
 
-mode = st.tabs(["📄 Simplify", "🧭 Clause Explorer", "🔍 Clarify a Clause", "🔀 Compare Contracts", "💬 Ask Questions"])
+mode = st.tabs(["📄 Simplify", "🧭 Clause Explorer", "🔍 Clarify a Clause", "🔀 Compare Contracts", "💬 Ask Questions", "🧑‍⚖️ Lawyer Prep"])
 
 # ------------------------------------------------------------- TAB 1: Simplify (FR-2)
 with mode[0]:
@@ -370,7 +403,7 @@ with mode[0]:
                     pdf_bytes = build_simplified_pdf(out.get("document_type", "legal document"), level, sections)
                     st.download_button("⬇️ Export simplified (PDF)", pdf_bytes,
                                        file_name="lexiclarity_simplified.pdf", mime="application/pdf")
-                except Exception as e:
+                except (ImportError, ValueError, TypeError) as e:
                     st.caption(f"PDF export unavailable ({e}); use the Markdown export instead.")
                 st.warning(DISCLAIMER)
 
@@ -482,6 +515,44 @@ with mode[1]:
                     cite(clause.get("source_span"), doc)
                     if risk == "High":
                         draft_key = f"{document_id(doc)}:{clause.get('section_id', clause.get('heading', 'clause'))}"
+                        ns_showcase = showcase and "indemnif" in (clause.get("source_span", "") + clause.get("heading", "")).lower()
+                        if st.button("🧭 Next steps", key=f"nextsteps_{draft_key}", disabled=not (api_key_configured() or ns_showcase)):
+                            if ns_showcase and not api_key_configured():
+                                steps = showcase.get("next_steps_indemnity")
+                            else:
+                                with st.spinner("Building a structured action plan…"):
+                                    try:
+                                        steps = tracked_task(
+                                            "next_steps",
+                                            f"clause_heading: {clause.get('heading', 'Clause')}\n"
+                                            f"risk_reason: {clause.get('risk_reason', '')}\n"
+                                            f"clause_text:\n{clause.get('source_span', '')}\n\n"
+                                            f"document_text:\n{truncate(doc, 30_000)}",
+                                        )
+                                    except LLMError as e:
+                                        st.error(str(e))
+                                        steps = None
+                            if steps:
+                                st.session_state.setdefault("next_steps", {})[draft_key] = steps
+                        steps = st.session_state.get("next_steps", {}).get(draft_key)
+                        if steps:
+                            with st.container(border=True):
+                                st.markdown("**🧭 Your options and next steps**")
+                                evidence_badge(steps)
+                                st.markdown(f"**What this means:** {steps.get('what_it_means', '')}")
+                                st.markdown(f"**Why it matters:** {steps.get('why_it_matters', '')}")
+                                st.markdown(f"**Who is affected:** {steps.get('who_is_affected', '')}")
+                                st.markdown(f"**What could happen:** {steps.get('what_could_happen', '')}")
+                                if steps.get("questions_to_ask"):
+                                    st.markdown("**Questions to ask:**")
+                                    for question in steps["questions_to_ask"]:
+                                        st.markdown(f"- {question}")
+                                if steps.get("negotiation_options"):
+                                    st.markdown("**Possible negotiation options:**")
+                                    for option in steps["negotiation_options"]:
+                                        st.markdown(f"- {option}")
+                                st.info(f"🧑‍⚖️ **When to consult a lawyer:** {steps.get('when_to_consult_a_lawyer', '')}")
+                                cite(steps.get("source_span"), doc)
                         if st.button("🤝 Draft negotiation language", key=f"negotiate_{draft_key}", disabled=not api_key_configured()):
                             with st.spinner("Drafting a neutral negotiation starting point…"):
                                 try:
@@ -532,6 +603,7 @@ with mode[1]:
                 "lexiclarity_audit_report.json",
                 "application/json",
             )
+            smart_disclaimer(clauses)
 
 # ------------------------------------------------------------- TAB 3: Clarify (FR-3)
 with mode[2]:
@@ -565,6 +637,7 @@ with mode[2]:
             color = RISK_COLOR.get(risk, "#f9a825")
             st.markdown(f"**Risk level:** <span style='color:{color};font-weight:700'>● {risk}</span> — {out.get('why_risky','')}",
                         unsafe_allow_html=True)
+            evidence_badge(out)
             st.write(out.get("plain_explanation", ""))
             if out.get("watch_out"):
                 st.info(f"👀 **Watch out:** {out['watch_out']}")
@@ -606,17 +679,35 @@ with mode[3]:
                         st.stop()
             changes = out.get("changes", [])
             icon = {"added": "🟢", "deleted": "🔴", "modified": "🟡", "unchanged": "⚪"}
+            impact_label = {
+                "financial": "💰 Financial", "deadline": "⏰ Deadline", "obligation": "📌 Obligation",
+                "right_removed": "🚫 Right removed", "new_penalty": "⚠️ New penalty", "none": "",
+            }
             st.markdown(f"**{len(changes)}** clauses analyzed · "
                         f"**{sum(1 for c in changes if c.get('materiality') == 'material' and c.get('change_type') != 'unchanged')}** material changes")
+            active_filters = st.multiselect(
+                "Filter by impact on you",
+                ["financial", "deadline", "obligation", "right_removed", "new_penalty"],
+                default=[],
+                format_func=lambda k: impact_label.get(k, k),
+                help="Show only changes that affect you in the selected ways. Empty = show all.",
+            )
             with st.expander("🟥🟩 Visual redline", expanded=True):
                 render_redline(doc_a, doc_b)
+            shown = 0
             for c in changes:
                 if c.get("change_type") == "unchanged":
                     continue
+                if active_filters and c.get("impact_category") not in active_filters:
+                    continue
+                shown += 1
                 with st.container(border=True):
                     st.markdown(f"{icon.get(c.get('change_type'), '⚪')} **{c.get('topic')}** — {c.get('change_type','').upper()}"
                                 + (" · `material`" if c.get("materiality") == "material" else ""))
                     st.write(c.get("summary", ""))
+                    if c.get("user_impact"):
+                        label = impact_label.get(c.get("impact_category", ""), "")
+                        st.markdown(f"**What changed for you:** {c['user_impact']}" + (f"  `{label}`" if label else ""))
                     ca, cb = st.columns(2)
                     with ca:
                         if c.get("source_span_a"):
@@ -626,6 +717,8 @@ with mode[3]:
                         if c.get("source_span_b"):
                             st.caption("Version B:")
                             cite(c["source_span_b"], doc_b)
+            if active_filters and shown == 0:
+                st.caption("No changes match the selected impact filters.")
             if out.get("overall_assessment"):
                 st.info(f"**Overall assessment:** {out['overall_assessment']}")
             compare_audit = build_audit_report(
@@ -655,6 +748,8 @@ with mode[4]:
         for turn in st.session_state.chat_history:
             with st.chat_message(turn["role"]):
                 st.markdown(turn["content"])
+                if turn.get("evidence"):
+                    evidence_badge(turn["evidence"])
                 for span in turn.get("citations", []):
                     cite(span, doc)
         showcase = showcase_for(doc)
@@ -684,11 +779,94 @@ with mode[4]:
             answer = out.get("answer", "")
             if out.get("advice_declined"):
                 answer += "\n\n*I can explain what the document says, but I can't give legal advice — please consult a qualified lawyer.*"
-            st.session_state.chat_history.append({"role": "assistant", "content": answer, "citations": out.get("citations", [])})
+            st.session_state.chat_history.append({
+                "role": "assistant", "content": answer, "citations": out.get("citations", []),
+                "evidence": {"evidence_type": out.get("evidence_type"), "confidence": out.get("confidence")},
+            })
             st.rerun()
         if st.session_state.get("chat_history") and st.button("Clear chat"):
             st.session_state.chat_history = []
             st.rerun()
+
+# ------------------------------------------------------------- TAB 6: Lawyer Prep
+with mode[5]:
+    st.subheader("Prepare for a lawyer")
+    st.caption("A one-page preparation pack to bring to a qualified lawyer — organized from what your document says. This is general information, not legal advice.")
+    doc = read_upload_or_sample("Upload a document", "up_lawyer")
+    if doc:
+        set_active_document("lawyer_document_id", doc)
+        showcase = showcase_for(doc)
+        if st.button("🧑‍⚖️ Build lawyer-preparation pack", type="primary", disabled=not (api_key_configured() or showcase)):
+            if showcase:
+                showcase_badge()
+                out = showcase.get("lawyer_prep")
+            else:
+                with st.spinner("Organizing your document for a legal consultation…"):
+                    try:
+                        out = tracked_task("lawyer_prep", f"document_text:\n{truncate(doc)}")
+                    except LLMError as e:
+                        st.error(str(e))
+                        out = None
+            if out:
+                st.session_state.lawyer_prep = {"document_id": document_id(doc), "data": out}
+        pack = st.session_state.get("lawyer_prep")
+        if pack and pack.get("document_id") == document_id(doc):
+            out = pack["data"]
+            st.markdown("### 📋 Case summary")
+            st.write(out.get("case_summary", ""))
+            if out.get("confidence"):
+                st.caption(f"Confidence: **{out['confidence']}**")
+            col_parties, col_dates = st.columns(2)
+            with col_parties:
+                st.markdown("#### 👥 Parties & responsibilities")
+                for p in out.get("parties", []):
+                    st.markdown(f"- **{p.get('name', '')}** ({p.get('role', '')}) — {p.get('responsibilities', '')}")
+            with col_dates:
+                st.markdown("#### 📅 Important dates & triggers")
+                for d in out.get("important_dates", []):
+                    st.markdown(f"- **{d.get('date_or_trigger', '')}** — {d.get('what_happens', '')}")
+            st.markdown("#### 💰 Financial obligations")
+            for f_ in out.get("financial_obligations", []):
+                st.markdown(f"- **{f_.get('item', '')}**: {f_.get('amount', '')} — due {f_.get('due', '')}")
+                cite(f_.get("source_span"), doc)
+            st.markdown("#### 🔴 Top risks")
+            for r in out.get("top_risks", []):
+                st.markdown(f"- **{r.get('risk', '')}** — {r.get('why', '')}")
+                cite(r.get("source_span"), doc)
+            col_missing, col_docs = st.columns(2)
+            with col_missing:
+                st.markdown("#### ❓ Missing or ambiguous information")
+                for m in out.get("missing_or_ambiguous", []):
+                    st.markdown(f"- {m}")
+            with col_docs:
+                st.markdown("#### 📎 Documents to bring")
+                for d_ in out.get("documents_to_bring", []):
+                    st.markdown(f"- {d_}")
+            st.markdown("#### 💬 Questions for your lawyer")
+            for q_ in out.get("questions_for_lawyer", []):
+                st.markdown(f"- {q_}")
+            if out.get("timeline"):
+                st.markdown("#### 🕐 Timeline of events")
+                for t_ in out["timeline"]:
+                    st.markdown(f"- **{t_.get('when', '')}** — {t_.get('event', '')}")
+            md = ["# Lawyer Preparation Pack", "", out.get("case_summary", ""), "",
+                  "## Parties", *[f"- **{p.get('name')}** ({p.get('role')}): {p.get('responsibilities')}" for p in out.get("parties", [])],
+                  "", "## Important dates", *[f"- {d.get('date_or_trigger')}: {d.get('what_happens')}" for d in out.get("important_dates", [])],
+                  "", "## Financial obligations", *[f"- {f_.get('item')}: {f_.get('amount')} (due {f_.get('due')})" for f_ in out.get("financial_obligations", [])],
+                  "", "## Top risks", *[f"- {r.get('risk')}: {r.get('why')}" for r in out.get("top_risks", [])],
+                  "", "## Missing / ambiguous", *[f"- {m}" for m in out.get("missing_or_ambiguous", [])],
+                  "", "## Questions for a lawyer", *[f"- {q_}" for q_ in out.get("questions_for_lawyer", [])],
+                  "", "## Documents to bring", *[f"- {d_}" for d_ in out.get("documents_to_bring", [])],
+                  "", "## Timeline", *[f"- {t_.get('when')}: {t_.get('event')}" for t_ in out.get("timeline", [])],
+                  "", "---", "Informational only — not legal advice. Generated by LexiClarity."]
+            st.download_button("⬇️ Export pack (Markdown)", "\n".join(md), "lexiclarity_lawyer_prep.md", "text/markdown")
+            try:
+                from src.pdf_export import build_lawyer_prep_pdf
+                st.download_button("⬇️ Export pack (PDF)", build_lawyer_prep_pdf(out),
+                                   "lexiclarity_lawyer_prep.pdf", "application/pdf")
+            except Exception as e:
+                st.caption(f"PDF export unavailable ({e}); use the Markdown export instead.")
+            st.warning(DISCLAIMER)
 
 st.divider()
 st.caption("🔒 Privacy: documents are processed in memory only and are never stored or logged. · LexiClarity is informational only and does not provide legal advice.")

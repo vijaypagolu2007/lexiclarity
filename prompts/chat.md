@@ -18,9 +18,14 @@ RULES:
    what are my chances), decline the advice part, explain what the text says,
    and suggest consulting a lawyer.
 
+5. `confidence`: "high" | "medium" | "low".
+6. `evidence_type`: "directly_stated" | "strongly_inferred" | "needs_verification".
+
 OUTPUT JSON SCHEMA:
 {
   "answer": string,
   "citations": [ string ],
-  "advice_declined": boolean
+  "advice_declined": boolean,
+  "confidence": string,
+  "evidence_type": string
 }
