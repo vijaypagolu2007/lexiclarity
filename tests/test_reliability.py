@@ -64,3 +64,123 @@ def test_large_document_truncation_marker():
     out = truncate(big, 120_000)
     assert len(out) < 130_000
     assert "truncated" in out
+
+
+def test_unauthenticated_api_key_gives_actionable_error(monkeypatch):
+    import src.llm as llm
+
+    class MockModels:
+        def generate_content(self, *args, **kwargs):
+            class FakeClientError(Exception):
+                code = 401
+                message = "Request had invalid authentication credentials."
+            raise FakeClientError("Request had invalid authentication credentials.")
+
+    class MockClient:
+        models = MockModels()
+
+    with pytest.raises(llm.LLMError, match=r"Google API Key authentication failed \(HTTP 401\)"):
+        llm.run_task("simplify", "payload", client=MockClient())
+
+
+def test_set_api_key_updates_environment_and_client():
+    import src.llm as llm
+    llm.set_api_key("test_key_123")
+    assert os.environ.get("GEMINI_API_KEY") == "test_key_123"
+    assert os.environ.get("GOOGLE_API_KEY") == "test_key_123"
+    assert llm.get_active_key() == "test_key_123"
+    llm.set_api_key("")
+    assert "GEMINI_API_KEY" not in os.environ
+    assert "GOOGLE_API_KEY" not in os.environ
+    assert llm.get_active_key() is None
+
+
+def test_standby_key_configuration_and_rotation():
+    import src.llm as llm
+    llm.set_active_key("active_key_1")
+    llm.set_standby_key("standby_key_2")
+    assert llm.get_active_key() == "active_key_1"
+    assert llm.get_standby_key() == "standby_key_2"
+    assert llm.standby_key_configured() is True
+
+    # Rotate standby into active production key
+    success, msg = llm.rotate_keys()
+    assert success is True
+    assert llm.get_active_key() == "standby_key_2"
+    assert llm.get_standby_key() is None
+    assert llm.standby_key_configured() is False
+
+    # Cleanup
+    llm.set_active_key("")
+
+
+def test_verify_key_success_and_failure():
+    import src.llm as llm
+
+    class MockSuccessModels:
+        def generate_content(self, *args, **kwargs):
+            return None
+
+    class MockFailModels:
+        def generate_content(self, *args, **kwargs):
+            class FakeClientError(Exception):
+                code = 401
+                message = "API key revoked"
+            raise FakeClientError("API key revoked")
+
+    class MockSuccessClient:
+        models = MockSuccessModels()
+
+    class MockFailClient:
+        models = MockFailModels()
+
+    # Success case
+    ok, msg = llm.verify_key("dummy_key", client=MockSuccessClient())
+    assert ok is True
+    assert "ready" in msg.lower()
+
+    # Failure case
+    ok, msg = llm.verify_key("bad_key", client=MockFailClient())
+    assert ok is False
+    assert "revoked" in msg.lower()
+
+
+def test_run_task_auto_failovers_to_standby_key(monkeypatch):
+    import src.llm as llm
+
+    llm.set_active_key("revoked_active_key")
+    llm.set_standby_key("working_standby_key")
+
+    call_count = 0
+
+    class MockModels:
+        def generate_content(self, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                class FakeAuthError(Exception):
+                    code = 401
+                    message = "Active key was revoked"
+                raise FakeAuthError("Active key was revoked")
+            # Second call (after rotation to standby key) succeeds
+            class FakeResp:
+                text = '{"status": "ok"}'
+                usage_metadata = None
+            return FakeResp()
+
+    class MockClient:
+        models = MockModels()
+
+    monkeypatch.setattr(llm, "_get_client", lambda: MockClient())
+
+    # Mock client argument triggers auto-rotation and recursive retry
+    result = llm.run_task("simplify", "payload", client=MockClient())
+    assert result == {"status": "ok"}
+    assert llm.get_active_key() == "working_standby_key"
+    assert llm.get_standby_key() is None
+    assert call_count == 2
+
+    # Cleanup
+    llm.set_active_key("")
+
+
