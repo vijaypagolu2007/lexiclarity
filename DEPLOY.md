@@ -10,9 +10,7 @@ PRD target: **publicly accessible live URL by 22 Sep 2026**, live throughout the
 4. Before deploying, open **Advanced settings → Secrets** and paste:
 
    ```toml
-   GEMINI_API_KEY = "your-active-gemini-api-key-here"
-   # Optional standby/rotation key:
-   # GEMINI_STANDBY_API_KEY = "your-standby-gemini-api-key-here"
+   GEMINI_API_KEY = "your-gemini-api-key-here"
    ```
 
 5. Deploy. The app reads the key from `st.secrets` automatically (`src/llm.py: load_secrets_into_env`).
