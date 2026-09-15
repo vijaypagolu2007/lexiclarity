@@ -86,11 +86,14 @@ def run_task(prompt_name: str, payload: str, client=None) -> dict:
         resp = client.models.generate_content(
           model=DEFAULT_MODEL,
           contents=prompt,
-          config=types.GenerateContentConfig(
-            system_instruction=load_prompt("system"),
-            response_mime_type="application/json",
-            temperature=0.2,
-          ),
+            config=types.GenerateContentConfig(
+                system_instruction=load_prompt("system"),
+                response_mime_type="application/json",
+                temperature=0.2,
+                # This app does not register tools. Explicitly disable the
+                # SDK's automatic function-calling path and its AFC warning.
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            ),
         )
         if not getattr(resp, "text", None):
             raise LLMError("Gemini returned an empty response. Please try again.")
