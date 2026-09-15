@@ -64,11 +64,12 @@ def _expand(tokens: set[str]) -> set[str]:
 
 def retrieve(question: str, document: str, k: int = 5) -> list[str]:
     q = _tokens(question)
+    chunks = chunk_document(document)
     if not q:
-        return chunk_document(document)[:k]
+        return chunks[:k]
     qx = _expand(q)
     scored = []
-    for chunk in chunk_document(document):
+    for chunk in chunks:
         ct = _tokens(chunk)
         # Exact question-word matches count double; synonym matches count once.
         exact = len(q & ct)

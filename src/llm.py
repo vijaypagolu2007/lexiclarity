@@ -19,7 +19,10 @@ from pathlib import Path
 import httpx
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+# Keep the deployment default configurable.  gemini-2.5-flash is a currently
+# deployable default; operators can pin another enabled model with GEMINI_MODEL.
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+MAX_RETRIES = 3
 
 _client = None
 _last_metrics: dict = {}
@@ -56,6 +59,8 @@ def _get_client():
 
 
 def _parse_json(raw: str) -> dict:
+    if not raw or not raw.strip():
+        raise LLMError("Gemini returned an empty response. Please try again.")
     text = raw.strip()
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.MULTILINE).strip()
     try:
@@ -76,16 +81,19 @@ def run_task(prompt_name: str, payload: str, client=None) -> dict:
     template = load_prompt(prompt_name)
     prompt = f"{template}\n\n===== INPUT =====\n{payload}"
     started = time.perf_counter()
-    try:
+    for attempt in range(MAX_RETRIES):
+      try:
         resp = client.models.generate_content(
-            model=DEFAULT_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=load_prompt("system"),
-                response_mime_type="application/json",
-                temperature=0.2,
-            ),
+          model=DEFAULT_MODEL,
+          contents=prompt,
+          config=types.GenerateContentConfig(
+            system_instruction=load_prompt("system"),
+            response_mime_type="application/json",
+            temperature=0.2,
+          ),
         )
+        if not getattr(resp, "text", None):
+            raise LLMError("Gemini returned an empty response. Please try again.")
         parsed = _parse_json(resp.text)
         usage = getattr(resp, "usage_metadata", None)
         _last_metrics = {
@@ -98,12 +106,26 @@ def run_task(prompt_name: str, payload: str, client=None) -> dict:
             "cached": False,
         }
         return parsed
-    except LLMError:
+      except LLMError:
         raise
-    except (httpx.HTTPError, TimeoutError, ConnectionError, OSError) as e:
-        raise LLMError("Gemini request failed because the network connection was unavailable.") from e
-    except (ValueError, TypeError, AttributeError) as e:
-        raise LLMError("Gemini returned an unusable response.") from e
+      except Exception as e:
+        status = getattr(e, "status_code", None) or getattr(getattr(e, "response", None), "status_code", None)
+        message = str(e).lower()
+        rate_limited = status == 429 or "rate limit" in message or "resource exhausted" in message
+        server_failure = isinstance(status, int) and 500 <= status < 600
+        transient = rate_limited or server_failure or isinstance(e, (httpx.HTTPError, TimeoutError, ConnectionError, OSError))
+        if transient and attempt < MAX_RETRIES - 1:
+            time.sleep(0.5 * (2 ** attempt))
+            continue
+        if rate_limited:
+            raise LLMError("Gemini is rate-limiting requests. Please wait a moment and try again.") from e
+        if server_failure:
+            raise LLMError("Gemini is temporarily unavailable. Please wait a moment and try again.") from e
+        if isinstance(e, (httpx.HTTPError, TimeoutError, ConnectionError, OSError)):
+            raise LLMError("Gemini request failed because the network connection was unavailable.") from e
+        if isinstance(e, (ValueError, TypeError, AttributeError)):
+            raise LLMError("Gemini returned an unusable response.") from e
+        raise LLMError("Gemini request failed unexpectedly. Please try again.") from e
 
 
 def last_metrics() -> dict:
