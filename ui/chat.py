@@ -1,12 +1,22 @@
 from __future__ import annotations
+
 import hashlib
 import json
+
 import streamlit as st
+
 from core.retrieval import get_relevant_chunks
 from core.security import sanitize_text
 from src.llm import LLMError, api_key_configured
 from src.retrieval import retrieve
-from .common import read_upload_or_sample, set_active_document, showcase_badge, showcase_for, tracked_task
+
+from .common import (
+    read_upload_or_sample,
+    set_active_document,
+    showcase_badge,
+    showcase_for,
+    tracked_task,
+)
 
 
 @st.fragment

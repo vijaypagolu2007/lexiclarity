@@ -50,7 +50,6 @@ def _from_pdf(data: bytes) -> str:
 def _from_docx(data: bytes) -> str:
     try:
         import docx
-        from docx.document import Document as _Doc
         from docx.table import Table
         from docx.text.paragraph import Paragraph
     except ImportError as e:  # pragma: no cover

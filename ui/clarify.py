@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import pandas as pd
-from pydantic import BaseModel, Field
 import streamlit as st
+from pydantic import BaseModel, Field
+
 from core.gemini import call_gemini_structured
 from core.security import render_safe_badge, sanitize_text
 
@@ -60,7 +62,7 @@ def render(clauses: list[str] | None = None) -> None:
                     help="Accessible audio readout of summary",
                 ):
                     st.info("Audio narration ready.")
-            except Exception as e:
+            except ValueError as e:
                 st.error(f"Analysis error: {sanitize_text(str(e))}")
 
     # Accessible Radar Chart Alternative

@@ -1,11 +1,12 @@
 import hashlib
+
 import streamlit as st
-from config import AppConfig
+
 from core.parser import process_uploaded_file
 from core.security import cleanup_document_state, sanitize_text
 from ui import clarify, compare, explorer, lawyer_prep, simplify
 from ui.chat import render_chat
-from ui.common import SAMPLE_PATH, truncate
+from ui.common import SAMPLE_PATH
 
 st.set_page_config(
     page_title="LexiClarity — Legal Accessibility",
@@ -59,7 +60,7 @@ def sidebar():
                 st.session_state.clauses = clauses
                 st.session_state.current_doc_hash = "sample_rental"
                 st.success("Loaded sample rental agreement.")
-            except Exception as e:
+            except (ValueError, OSError, UnicodeDecodeError) as e:
                 st.error(f"Could not load sample: {sanitize_text(str(e))}")
 
 

@@ -1,4 +1,3 @@
-from config import AppConfig
 
 
 def get_relevant_chunks(query: str, clauses: list[str], top_k: int = 5) -> str:

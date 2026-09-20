@@ -1,16 +1,27 @@
 from core.security import sanitize_text
 
 
-def test_export_payload_formatting():
-    """Ensures generated export files contain sanitized plain text and proper formatting."""
-    clauses = ["Landlord may enter premises at any time without notice."]
-    summary = "The landlord can enter without informing you."
+def generate_export_summary(doc_name: str, clauses: list[dict]) -> str:
+    """Generates structured Markdown export."""
+    lines = [f"# LexiClarity Legal Summary: {doc_name}\n", "> **Notice:** Informational summary only. Not legal advice.\n"]
+    for idx, c in enumerate(clauses, 1):
+        lines.append(f"## Clause {idx}: {c['title']}")
+        lines.append(f"**Risk:** {c['risk']}")
+        lines.append(f"**Explanation:** {c['explanation']}")
+        lines.append(f"> Source: *\"{c['source']}\"*\n")
+    return "\n".join(lines)
 
-    export_text = f"# Legal Summary\n\n## Clause 1\n{clauses[0]}\n\n### Explanation\n{summary}\n"
 
-    assert "Landlord" in export_text
-    assert "<script>" not in export_text
-    assert len(export_text.encode("utf-8")) > 0
+def test_export_file_content_and_structure():
+    clauses = [
+        {"title": "Termination", "risk": "HIGH", "explanation": "Terminable without notice.", "source": "terminate immediately."}
+    ]
+    export_content = generate_export_summary("RentalAgreement.pdf", clauses)
+
+    assert "# LexiClarity Legal Summary" in export_content
+    assert "Not legal advice" in export_content
+    assert "HIGH" in export_content
+    assert len(export_content.encode("utf-8")) > 50
 
 
 def test_export_sanitization_defense():

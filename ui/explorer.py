@@ -1,13 +1,25 @@
 from __future__ import annotations
+
 import pandas as pd
 import streamlit as st
+
 from core.security import sanitize_text
 from src.grounding import check_items, grounded_rate
 from src.llm import LLMError, api_key_configured
 from src.scoring import CATEGORIES, score_clauses
-from .common import (DISCLAIMER, cite, document_id, load_showcase, read_upload_or_sample,
-                     render_radar_chart, set_active_document, showcase_badge, showcase_for,
-                     tracked_task, truncate)
+
+from .common import (
+    DISCLAIMER,
+    cite,
+    document_id,
+    read_upload_or_sample,
+    render_radar_chart,
+    set_active_document,
+    showcase_badge,
+    showcase_for,
+    tracked_task,
+    truncate,
+)
 
 
 @st.fragment

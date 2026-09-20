@@ -1,5 +1,6 @@
 import html
 import re
+
 import streamlit as st
 
 
@@ -7,7 +8,10 @@ def sanitize_text(user_or_model_input: str) -> str:
     """Escapes all HTML tags and characters to prevent XSS injection via model outputs."""
     if not user_or_model_input:
         return ""
-    return html.escape(str(user_or_model_input))
+    cleaned = str(user_or_model_input)
+    cleaned = re.sub(r"(?i)\bon\w+\s*=", "", cleaned)
+    cleaned = re.sub(r"(?i)javascript\s*:", "", cleaned)
+    return html.escape(cleaned)
 
 
 def render_safe_badge(risk_level: str, rationale: str) -> str:

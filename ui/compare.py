@@ -1,10 +1,23 @@
 from __future__ import annotations
+
 import json
+
 import streamlit as st
+
 from core.security import sanitize_text
-from src.diffing import changed_blocks
 from src.llm import LLMError, api_key_configured
-from .common import DISCLAIMER, read_upload, set_active_document, showcase_badge, truncate, tracked_task, load_showcase, document_id, render_redline, cite
+
+from .common import (
+    DISCLAIMER,
+    document_id,
+    load_showcase,
+    read_upload,
+    render_redline,
+    set_active_document,
+    showcase_badge,
+    tracked_task,
+    truncate,
+)
 
 
 @st.fragment

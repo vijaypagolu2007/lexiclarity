@@ -11,6 +11,8 @@ node_modules/
 dev.js
 package.json
 .pytest_cache/ 
+.coverage
+coverage.xml
 __pycache__/ 
 *.pyc 
 .venv/ 

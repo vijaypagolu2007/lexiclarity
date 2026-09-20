@@ -1,9 +1,20 @@
 from __future__ import annotations
+
 import streamlit as st
+
 from core.security import sanitize_text
 from src.llm import LLMError, api_key_configured
-from .common import (DISCLAIMER, read_upload_or_sample, set_active_document, showcase_for,
-                     showcase_badge, tracked_task, truncate, document_id, cite)
+
+from .common import (
+    DISCLAIMER,
+    document_id,
+    read_upload_or_sample,
+    set_active_document,
+    showcase_badge,
+    showcase_for,
+    tracked_task,
+    truncate,
+)
 
 
 @st.fragment

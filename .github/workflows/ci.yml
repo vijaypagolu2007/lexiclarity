@@ -1,0 +1,47 @@
+name: Platform Evaluation CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  code-assessment:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Code Quality & Lint Check (Ruff)
+      run: |
+        pip install ruff
+        ruff check .
+
+    - name: Execute Pytest Suite with Coverage
+      run: |
+        pytest tests/ -v --ignore=tests/test_accessibility_e2e.py --cov=. --cov-report=term-missing
+
+    - name: Verify Repo Size (< 10 MB limit)
+      run: |
+        REPO_SIZE_KB=$(git count-objects -v | grep 'size-pack' | awk '{print $2}')
+        if [ -z "$REPO_SIZE_KB" ]; then REPO_SIZE_KB=$(du -sk .git | awk '{print $1}'); fi
+        echo "Current Repo Size: ${REPO_SIZE_KB} KB"
+        if [ "$REPO_SIZE_KB" -gt 10240 ]; then
+          echo "ERROR: Repository exceeds 10 MB evaluation limit!"
+          exit 1
+        else
+          echo "SUCCESS: Repository size is within limits."
+        fi

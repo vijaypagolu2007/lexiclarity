@@ -1,5 +1,4 @@
-from src.llm import load_prompt
-from src.llm import last_metrics
+from src.llm import last_metrics, load_prompt
 
 
 def test_clause_map_prompt_contains_phase_one_contract():

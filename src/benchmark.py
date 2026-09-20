@@ -49,7 +49,7 @@ def _profile(document_type: str) -> str:
 def reference_signal(clause: dict, document_type: str) -> dict:
     """Return matched reference patterns without making comparative claims."""
     text = " ".join(str(clause.get(key, "")) for key in ("heading", "summary", "source_span"))
-    matches = [name for name, pattern in REFERENCE_PATTERNS[_profile(document_type)] if re.search(pattern, text, re.I)]
+    matches = [name for name, pattern in REFERENCE_PATTERNS[_profile(document_type)] if re.search(pattern, text, re.IGNORECASE)]
     return {
         "profile": _profile(document_type),
         "matched_patterns": matches,

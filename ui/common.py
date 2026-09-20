@@ -224,7 +224,7 @@ def cite(span: str | None, document: str) -> None:
 # --------------------------------------------------------------------------- visual renderers
 def render_radar_chart(scores: dict[str, int]) -> None:
     """Radar chart + an accessible text-table alternative of the same data."""
-    size, center, radius = 280, 140, 92
+    center, radius = 140, 92
 
     def point(index: int, value: float) -> tuple[float, float]:
         angle = -math.pi / 2 + (2 * math.pi * index / len(CATEGORIES))

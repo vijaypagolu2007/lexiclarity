@@ -1,4 +1,5 @@
 import io
+
 from config import AppConfig
 
 try:
@@ -15,8 +16,10 @@ def process_uploaded_file(uploaded_file, file_bytes: bytes):
         raise ValueError(f"File exceeds maximum allowed size of {max_mb}MB.")
 
     extracted_text = ""
-    file_type = getattr(uploaded_file, "type", "")
-    file_name = getattr(uploaded_file, "name", "").lower()
+    raw_type = getattr(uploaded_file, "type", "")
+    file_type = raw_type if isinstance(raw_type, str) else ""
+    raw_name = getattr(uploaded_file, "name", "")
+    file_name = raw_name.lower() if isinstance(raw_name, str) else ""
 
     if file_type == "application/pdf" or file_name.endswith(".pdf"):
         if fitz is not None:
@@ -57,3 +60,10 @@ def process_uploaded_file(uploaded_file, file_bytes: bytes):
         c.strip() for c in extracted_text.split("\n\n") if len(c.strip()) > 30
     ]
     return extracted_text, clauses
+
+
+def truncate(text: str, max_chars: int) -> str:
+    """Truncate document text to max_chars and append a truncation notice."""
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "\n\n[Document truncated to fit processing limits.]"

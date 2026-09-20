@@ -1,5 +1,4 @@
 """Reliability / failure-handling tests (offline, no API key needed)."""
-import os
 
 import pytest
 
@@ -46,7 +45,7 @@ def test_json_with_markdown_fences_is_tolerated():
 def test_missing_api_key_gives_actionable_error(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    import src.llm as llm
+    from src import llm
     monkeypatch.setattr(llm, "_client", None)
     with pytest.raises(LLMError, match="No API key found"):
         llm._get_client()
@@ -59,7 +58,7 @@ def test_all_prompt_templates_exist_and_nonempty():
 
 
 def test_large_document_truncation_marker():
-    from app import truncate  # noqa: import streamlit-heavy module is fine in tests
+    from core.parser import truncate
     big = "x" * 200_000
     out = truncate(big, 120_000)
     assert len(out) < 130_000

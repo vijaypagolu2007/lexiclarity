@@ -1,11 +1,23 @@
 from __future__ import annotations
+
 import streamlit as st
+
 from core.security import sanitize_text
 from src.grounding import check_items, grounded_rate
 from src.llm import LLMError, api_key_configured
-from .common import (DISCLAIMER, guardrail, read_upload_or_sample, set_active_document,
-                     showcase_badge, showcase_for, tracked_task, truncate, cite,
-                     render_speech_button, document_id)
+
+from .common import (
+    DISCLAIMER,
+    cite,
+    guardrail,
+    read_upload_or_sample,
+    render_speech_button,
+    set_active_document,
+    showcase_badge,
+    showcase_for,
+    tracked_task,
+    truncate,
+)
 
 
 @st.fragment

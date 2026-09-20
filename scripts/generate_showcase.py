@@ -16,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.extract import extract_text  # noqa: E402
-from src.llm import run_task  # noqa: E402
-from src.retrieval import retrieve  # noqa: E402
+from src.extract import extract_text
+from src.llm import run_task
+from src.retrieval import retrieve
 
 SAMPLE_A = ROOT / "samples" / "sample_rental_agreement.txt"
 SAMPLE_B = ROOT / "samples" / "sample_rental_agreement_revised.txt"
@@ -34,7 +34,7 @@ def call(name: str, prompt: str, payload: str) -> dict:
             result = run_task(prompt, payload)
             time.sleep(GAP_SECONDS)
             return result
-        except Exception as e:
+        except (RuntimeError, OSError, TimeoutError, ConnectionError) as e:
             wait = 25 * (attempt + 1)
             print(f"  attempt {attempt + 1} failed ({type(e).__name__}); retrying in {wait}s", flush=True)
             time.sleep(wait)
