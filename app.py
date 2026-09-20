@@ -4,7 +4,7 @@ import streamlit as st
 
 from core.parser import process_uploaded_file
 from core.security import cleanup_document_state, sanitize_text
-from ui import clarify, compare, explorer, lawyer_prep, simplify
+from ui import clarify, compare, explorer, lawyer_prep, negotiate, simplify
 from ui.chat import render_chat
 from ui.common import SAMPLE_PATH
 
@@ -81,6 +81,7 @@ tabs = st.tabs([
     "⚖️ Compare",
     "💬 Document Chat",
     "📋 Lawyer Prep",
+    "🤝 Negotiate",
 ])
 
 with tabs[0]:
@@ -95,3 +96,5 @@ with tabs[4]:
     render_chat(st.session_state.doc_text)
 with tabs[5]:
     lawyer_prep.render(st.session_state.clauses)
+with tabs[6]:
+    negotiate.render(st.session_state.clauses)

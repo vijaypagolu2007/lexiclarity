@@ -4,7 +4,34 @@ No heavy deps: paragraph chunks scored by token-overlap against the question.
 """
 from __future__ import annotations
 
+import os
 import re
+
+import numpy as np
+import streamlit as st
+from google import genai
+
+_embedding_client = genai.Client(
+    api_key=os.environ.get("GEMINI_API_KEY")
+    or os.environ.get("GOOGLE_API_KEY")
+    or "dummy_key_for_testing"
+)
+
+
+@st.cache_data(show_spinner=False, max_entries=100)
+def get_embedding(text: str) -> list[float]:
+    """Return a cached Gemini embedding for semantic document retrieval."""
+    response = _embedding_client.models.embed_content(
+        model="text-embedding-004", contents=text
+    )
+    return response.embeddings[0].values
+
+
+def cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Calculate cosine similarity while tolerating zero-length vectors."""
+    left, right = np.asarray(a), np.asarray(b)
+    denominator = np.linalg.norm(left) * np.linalg.norm(right)
+    return float(np.dot(left, right) / denominator) if denominator else 0.0
 
 _STOP = {
     "the", "a", "an", "is", "are", "was", "were", "of", "to", "in", "on", "for",

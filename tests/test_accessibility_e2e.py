@@ -2,6 +2,7 @@ import urllib.error
 import urllib.request
 
 import pytest
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import expect, sync_playwright
 
 LOCAL_TEST_URL = "http://localhost:8501"
@@ -32,7 +33,7 @@ def test_accessibility_and_mobile_responsiveness(page):
 
     try:
         page.goto(LOCAL_TEST_URL, timeout=10000)
-    except (TimeoutError, OSError, ConnectionError):
+    except (PlaywrightError, OSError):
         pytest.skip(f"Streamlit server not running on {LOCAL_TEST_URL}. Skipping live e2e.")
 
     # 2. Disclaimer must be visible

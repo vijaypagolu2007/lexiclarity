@@ -32,7 +32,7 @@ jobs:
 
     - name: Execute Pytest Suite with Coverage
       run: |
-        pytest tests/ -v --ignore=tests/test_accessibility_e2e.py --cov=. --cov-report=term-missing
+        pytest tests/ -v --ignore=tests/test_accessibility_e2e.py --cov=core --cov=src --cov-report=term-missing --cov-fail-under=85
 
     - name: Verify Repo Size (< 10 MB limit)
       run: |

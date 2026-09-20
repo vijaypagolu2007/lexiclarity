@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 import streamlit as st
 from pydantic import BaseModel, Field
 
-from core.gemini import call_gemini_structured
+from core.gemini import call_gemini_structured_cached
 from core.security import render_safe_badge, sanitize_text
+from ui.components.audio import render_audio_player
 
 
 class ClauseAnalysis(BaseModel):
@@ -41,9 +44,9 @@ def render(clauses: list[str] | None = None) -> None:
     ):
         with st.spinner("Analyzing risk and obligations..."):
             try:
-                res = call_gemini_structured(
+                res = call_gemini_structured_cached(
                     prompt=f"Analyze this legal clause:\n{clause_text}",
-                    schema=ClauseAnalysis,
+                    schema_json=json.dumps(ClauseAnalysis.model_json_schema(), sort_keys=True),
                 )
 
                 # Accessible text badge
@@ -61,7 +64,7 @@ def render(clauses: list[str] | None = None) -> None:
                     key="btn_audio_play",
                     help="Accessible audio readout of summary",
                 ):
-                    st.info("Audio narration ready.")
+                    render_audio_player(res.get("summary", ""))
             except ValueError as e:
                 st.error(f"Analysis error: {sanitize_text(str(e))}")
 

@@ -5,6 +5,7 @@ import streamlit as st
 from core.security import sanitize_text
 from src.grounding import check_items, grounded_rate
 from src.llm import LLMError, api_key_configured
+from ui.components.audio import render_audio_player
 
 from .common import (
     DISCLAIMER,
@@ -66,6 +67,7 @@ def render(doc_text: str | None = None) -> None:
         if summary:
             st.write(f"**🔊 Audio summary ({sanitize_text(out.get('language', language))})**")
             render_speech_button(summary, language)
+            render_audio_player(summary, {"English": "en", "Hindi": "hi", "Spanish": "es", "Tamil": "ta", "Telugu": "te"}.get(language, "en"))
 
         if out.get("key_terms"):
             st.write("#### Key terms")

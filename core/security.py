@@ -18,9 +18,9 @@ def render_safe_badge(risk_level: str, rationale: str) -> str:
     """Renders accessible, escaped badge markdown without raw HTML."""
     risk_level = (risk_level or "").upper().strip()
     icons = {
-        "HIGH": "🔴 **HIGH RISK**",
-        "MEDIUM": "🟡 **MEDIUM RISK**",
-        "LOW": "🟢 **LOW RISK**",
+        "HIGH": "🛑 🔴 **HIGH RISK**",
+        "MEDIUM": "⚠️ 🟡 **MEDIUM RISK**",
+        "LOW": "✅ 🟢 **LOW RISK**",
     }
     icon_label = icons.get(risk_level, "⚪ **NOTICE**")
     safe_rationale = sanitize_text(rationale)
