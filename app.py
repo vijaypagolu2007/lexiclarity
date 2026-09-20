@@ -1,41 +1,96 @@
-"""LexiClarity Streamlit composition root."""
-from __future__ import annotations
+import hashlib
 import streamlit as st
-from src.llm import api_key_configured, load_secrets_into_env
-from ui.common import DISCLAIMER, SAMPLE_PATH, SAMPLE_B_PATH, load_showcase, truncate
-from ui import simplify, explorer, clarify, compare, chat, lawyer_prep
+from config import AppConfig
+from core.parser import process_uploaded_file
+from core.security import cleanup_document_state, sanitize_text
+from ui import clarify, compare, explorer, lawyer_prep, simplify
+from ui.chat import render_chat
+from ui.common import SAMPLE_PATH, truncate
 
-st.set_page_config(page_title="LexiClarity — Legal docs in plain language", page_icon="⚖️", layout="wide")
-load_secrets_into_env()
+st.set_page_config(
+    page_title="LexiClarity — Legal Accessibility",
+    page_icon="⚖️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-def sidebar() -> None:
+# Initialize Session State
+if "current_doc_hash" not in st.session_state:
+    st.session_state.current_doc_hash = None
+    st.session_state.doc_text = ""
+    st.session_state.clauses = []
+    st.session_state.chat_history = []
+
+
+def sidebar():
     with st.sidebar:
-        st.subheader("Quick start")
-        st.caption("Upload a contract in any tab, or load the included sample.")
+        st.title("⚖️ LexiClarity")
+        uploaded_file = st.file_uploader(
+            "Upload Contract (PDF, DOCX, TXT)",
+            type=["pdf", "docx", "txt"],
+            help="Maximum size: 10MB or 50 pages.",
+        )
+
+        if uploaded_file:
+            file_bytes = uploaded_file.getvalue()
+            file_hash = hashlib.sha256(file_bytes).hexdigest()
+
+            # Document Switch Detection
+            if st.session_state.current_doc_hash != file_hash:
+                cleanup_document_state()
+                try:
+                    raw_text, clauses = process_uploaded_file(uploaded_file, file_bytes)
+                    st.session_state.doc_text = raw_text
+                    st.session_state.clauses = clauses
+                    st.session_state.current_doc_hash = file_hash
+                    st.success(f"Loaded: {uploaded_file.name}")
+                except ValueError as e:
+                    st.error(f"File Error: {sanitize_text(str(e))}")
+
+        st.divider()
         if st.button("Load sample rental agreement", use_container_width=True):
             try:
-                st.session_state.sample_document = SAMPLE_PATH.read_text(encoding="utf-8")
-                st.session_state.sample_name = SAMPLE_PATH.name
-                st.session_state.use_sample_document = True
-                st.session_state.chat_history = []
-                st.success("Sample loaded. Open a tab to explore it.")
-            except OSError as e: st.error(f"Could not load the sample: {e}")
-        if st.session_state.get("sample_document"): st.info(f"Sample available: {st.session_state.get('sample_name', 'sample document')}")
-        if st.button("Load sample pair (Compare tab)", use_container_width=True):
-            try:
-                st.session_state.sample_pair_a = SAMPLE_PATH.read_text(encoding="utf-8")
-                st.session_state.sample_pair_b = SAMPLE_B_PATH.read_text(encoding="utf-8")
-                st.success("Sample pair loaded. Open Compare Contracts.")
-            except OSError as e: st.error(f"Could not load the sample pair: {e}")
-        if not api_key_configured() and load_showcase(): st.caption("⚡ Showcase Mode available for the bundled sample.")
-        st.divider(); st.caption("Privacy mode: documents stay in memory for this session and are not written to disk.")
+                sample_text = SAMPLE_PATH.read_text(encoding="utf-8")
+                sample_bytes = sample_text.encode("utf-8")
+                cleanup_document_state()
+                mock_file = type("SampleFile", (), {"name": "rental_agreement.txt", "type": "text/plain"})
+                raw_text, clauses = process_uploaded_file(mock_file, sample_bytes)
+                st.session_state.doc_text = raw_text
+                st.session_state.clauses = clauses
+                st.session_state.current_doc_hash = "sample_rental"
+                st.success("Loaded sample rental agreement.")
+            except Exception as e:
+                st.error(f"Could not load sample: {sanitize_text(str(e))}")
 
-st.title("⚖️ LexiClarity")
-st.write("**Understand any legal document in plain language** — simplify, clarify clauses, compare versions.")
-st.caption("Hackathon 2026 · AI for Legal Assistance & Access")
-st.warning(DISCLAIMER)
+
+# Persistent Legal Disclaimer
+st.warning("⚠️ **Disclaimer:** LexiClarity is an informational GenAI tool for accessibility. It is not legal advice.")
 sidebar()
-tabs = st.tabs(["📄 Simplify", "🧭 Explorer", "🔍 Clarify", "🔀 Compare", "💬 Questions", "🧑‍⚖️ Lawyer prep"])
-for tab, renderer in zip(tabs, [simplify.render, explorer.render, clarify.render, compare.render, chat.render, lawyer_prep.render]):
-    with tab: renderer()
-st.divider(); st.caption("🔒 Privacy: documents are processed in memory only and are never stored or logged. · Informational only, not legal advice.")
+
+# Guard against empty state
+if not st.session_state.doc_text:
+    st.info("👈 Please upload a legal agreement from the sidebar or load the sample agreement to begin.")
+    st.stop()
+
+# Responsive Tab Navigation
+tabs = st.tabs([
+    "📖 Simplify",
+    "🔍 Clause Explorer",
+    "⚡ Clarify Clause",
+    "⚖️ Compare",
+    "💬 Document Chat",
+    "📋 Lawyer Prep",
+])
+
+with tabs[0]:
+    simplify.render(st.session_state.doc_text)
+with tabs[1]:
+    explorer.render(st.session_state.clauses)
+with tabs[2]:
+    clarify.render(st.session_state.clauses)
+with tabs[3]:
+    compare.render(st.session_state.doc_text)
+with tabs[4]:
+    render_chat(st.session_state.doc_text)
+with tabs[5]:
+    lawyer_prep.render(st.session_state.clauses)
