@@ -1,69 +1,96 @@
+"""Gemini client adapter for LexiClarity.
+
+Wraps Google GenAI SDK for server-side natural language generation,
+explanations, and RAG operations.
+"""
+
+from __future__ import annotations
+
 import json
-import os
+import logging
+import re
+import time
+from typing import Any
 
-import streamlit as st
-from google import genai
-from google.genai import types
-from google.genai.errors import APIError
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from config import get_gemini_config
 
-from config import AppConfig
-
-_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "dummy_key_for_testing"
-client = genai.Client(api_key=_api_key)
+logger = logging.getLogger(__name__)
 
 
-@st.cache_data(show_spinner=False, max_entries=50)
-def call_gemini_structured_cached(
-    prompt: str, schema_json: str, system_instruction: str | None = None
-) -> dict:
-    """Cached JSON-schema Gemini call for repeated prompts."""
-    schema = json.loads(schema_json) if schema_json else None
-    return _call_gemini_structured_uncached(prompt, schema, system_instruction)
+def clean_json_response(raw: str) -> dict[str, Any]:
+    """Clean markdown json formatting and parse response string."""
+    if not raw:
+        return {}
+    cleaned = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned, flags=re.IGNORECASE).strip()
+    return json.loads(cleaned)
 
 
-@retry(
-    stop=stop_after_attempt(4),
-    wait=wait_exponential(multiplier=1.5, min=2, max=15),
-    retry=retry_if_exception_type((APIError, TimeoutError, ConnectionError)),
-    reraise=True,
-)
-def _call_gemini_structured_uncached(
-    prompt: str, schema=None, system_instruction: str | None = None
-) -> dict:
-    """Calls Gemini with strict JSON schema enforcement and exponential backoff retry."""
-    config_kwargs = {
-        "response_mime_type": "application/json",
-        "system_instruction": system_instruction,
-        "temperature": 0.0,  # Zero temperature for deterministic legal grounding
-    }
-    if schema is not None:
-        config_kwargs["response_schema"] = schema
+class GeminiClient:
+    """Encapsulates Gemini API calls with retries and structured parsing."""
 
-    config = types.GenerateContentConfig(**config_kwargs)
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
+        self.config = get_gemini_config()
+        self.api_key = api_key or self.config.api_key
+        self.model = model or self.config.model
+        self._client: Any = None
 
-    response = client.models.generate_content(
-        model=AppConfig.MODEL_NAME, contents=prompt, config=config
-    )
+    def is_available(self) -> bool:
+        return bool(self.api_key)
 
-    if not response or not getattr(response, "text", None):
-        raise ValueError("Received empty response from Gemini API.")
+    def _get_client(self) -> Any:
+        if self._client is None:
+            if not self.api_key:
+                raise RuntimeError("GEMINI_API_KEY is not configured.")
+            try:
+                from google import genai
 
-    try:
-        return json.loads(response.text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Malformed schema response: {response.text}") from exc
+                self._client = genai.Client(api_key=self.api_key)
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize Gemini Client: {e}") from e
+        return self._client
 
+    def generate_json(
+        self,
+        contents: str,
+        system_instruction: str | None = None,
+        max_attempts: int = 3,
+    ) -> dict[str, Any]:
+        """Generate structured JSON response with retries."""
+        client = self._get_client()
+        last_error: Exception | None = None
 
-def call_gemini_structured(
-    prompt: str, schema=None, system_instruction: str | None = None
-) -> dict:
-    """Compatibility wrapper retaining the existing schema-based API."""
-    # Pydantic classes and SDK schema objects are not reliably hashable. Keep
-    # the public API stable and expose the cache-safe string-schema entry point.
-    return _call_gemini_structured_uncached(prompt, schema, system_instruction)
+        for attempt in range(max_attempts):
+            try:
+                from google.genai import types
+
+                config = types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    temperature=self.config.temperature,
+                )
+
+                response = client.models.generate_content(
+                    model=self.model,
+                    contents=contents,
+                    config=config,
+                )
+
+                text = response.text
+                if not text:
+                    raise ValueError("Gemini returned empty response text.")
+
+                return clean_json_response(text)
+
+            except Exception as e:  # noqa: BLE001
+                last_error = e
+                logger.warning(
+                    "Gemini generation attempt %d failed: %s",
+                    attempt + 1,
+                    e,
+                )
+                time.sleep(1.0 * (attempt + 1))
+
+        raise RuntimeError(
+            f"Gemini generation failed after {max_attempts} attempts: {last_error}"
+        )

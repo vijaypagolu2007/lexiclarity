@@ -1,80 +1,98 @@
+"""Chat UI and orchestration layer with Jev decision routing."""
+
 from __future__ import annotations
 
-import hashlib
 import json
+from typing import Any
 
-import streamlit as st
-
-from core.retrieval import get_relevant_chunks
-from core.security import sanitize_text
-from src.llm import LLMError, api_key_configured
+from src.decision_engine import (
+    STRATEGY_CLARIFY,
+    DecisionEngine,
+    DecisionResult,
+    get_decision_engine,
+)
+from src.llm import run_task
 from src.retrieval import retrieve
 
-from .common import (
-    read_upload_or_sample,
-    set_active_document,
-    showcase_badge,
-    showcase_for,
-    tracked_task,
-)
+
+def format_debug_decision_panel(decision: DecisionResult) -> dict[str, Any]:
+    """Format developer/debug-only decision panel metadata.
+
+    Fields:
+    - Intent
+    - Ambiguity
+    - Risk
+    - Confidence
+    - Strategy
+    """
+    return {
+        "Intent": decision.intent,
+        "Ambiguity": f"{decision.ambiguity:.2f}",
+        "Risk": f"{decision.risk:.1f}/100",
+        "Confidence": f"{decision.confidence:.2f}",
+        "Strategy": decision.strategy,
+        "IsFallback": decision.is_fallback,
+    }
 
 
-@st.fragment
-def render(doc_text: str | None = None) -> None:
-    st.subheader("💬 Ask questions about your document")
-    doc = doc_text or st.session_state.get("doc_text")
-    if not doc:
-        doc = read_upload_or_sample("Upload a document", "up_chat")
-    if not doc:
-        st.info("👈 Please upload a legal agreement or load a sample from the sidebar to chat.")
-        return
+def handle_chat_query(
+    question: str,
+    document_text: str,
+    decision_engine: DecisionEngine | None = None,
+    force_direct: bool = False,
+) -> dict[str, Any]:
+    """Orchestrate chat pipeline: Jev decision -> deterministic routing -> Gemini RAG.
 
-    set_active_document("chat_document_id", doc)
-    st.session_state.setdefault("chat_history", [])
+    Returns response dict with answer, citations, and optional debug decision panel.
+    """
+    engine = decision_engine or get_decision_engine()
 
-    for turn in st.session_state.chat_history:
-        with st.chat_message(turn["role"]):
-            st.markdown(sanitize_text(turn["content"]))
+    # Step 1: Evaluate structured decision signals via Jev
+    decision: DecisionResult = engine.decide(
+        user_query=question,
+        document_context=document_text[:4000],
+    )
 
-    showcase = showcase_for(doc)
-    question = None
-    if showcase:
-        showcase_badge()
-        for sample_q in showcase.get("chat_answers", {}):
-            if st.button(f"💬 {sample_q}", key=f"showcase_q_{hashlib.sha256(sample_q.encode()).hexdigest()[:10]}"):
-                question = sample_q
-    else:
-        question = st.chat_input("e.g. When can the landlord raise the rent?", disabled=not api_key_configured())
+    debug_panel = format_debug_decision_panel(decision)
 
-    if question:
-        try:
-            clauses = st.session_state.get("clauses", [])
-            if clauses:
-                relevant_context = get_relevant_chunks(question, clauses, top_k=5)
-            else:
-                relevant_context = json.dumps(retrieve(question, doc, k=5), ensure_ascii=False)
+    # Step 2: Deterministic application routing
+    if decision.strategy == STRATEGY_CLARIFY and not force_direct:
+        # Request is ambiguous or high-risk: prompt user for clarification before generating response
+        clarification_reason = (
+            "Your question touches on high-risk contractual liability or has multiple possible interpretations."
+            if decision.risk >= 60.0
+            else "Your question is somewhat ambiguous given the document's provisions."
+        )
+        return {
+            "status": "requires_clarification",
+            "clarification_needed": True,
+            "clarification_message": (
+                f"{clarification_reason} Would you like an overview of the general clause, "
+                "or are you asking about specific exceptions or financial liability?"
+            ),
+            "suggested_actions": [
+                "Explain the standard rule in plain English",
+                "Analyze the legal risk and liability exposure",
+                "Draft negotiation points or counter-clauses",
+            ],
+            "decision": decision.to_dict(),
+            "debug_panel": debug_panel,
+        }
 
-            out = showcase.get("chat_answers", {}).get(question) if showcase else tracked_task(
-                "chat",
-                f"question: {question}\n\nUse only these retrieved document excerpts as context:\n{relevant_context}"
-            )
-            if not out:
-                st.warning("No answer was returned. Please try a more specific question.")
-                return
-            answer = out.get("answer", "") or "No answer was returned."
-            if out.get("advice_declined"):
-                answer += "\n\nI can explain the document, but I cannot give legal advice."
-            st.session_state.chat_history += [
-                {"role": "user", "content": question},
-                {"role": "assistant", "content": answer}
-            ]
-            st.rerun()
-        except LLMError as e:
-            st.error(sanitize_text(str(e)))
+    # Step 3: Direct RAG pipeline
+    chunks = retrieve(question, document_text, k=5)
+    payload = (
+        f"question: {question}\n\n"
+        f"context_chunks:\n{json.dumps(chunks, ensure_ascii=False)}\n\n"
+        f"document_text:\n{document_text[:20000]}"
+    )
 
-    if st.session_state.chat_history and st.button("Clear chat", key="clear_chat"):
-        st.session_state.chat_history = []
-        st.rerun()
+    gemini_result = run_task("chat", payload)
 
-
-render_chat = render
+    return {
+        "status": "answered",
+        "answer": gemini_result.get("answer", ""),
+        "citations": gemini_result.get("citations", []),
+        "decision": decision.to_dict(),
+        "debug_panel": debug_panel,
+    }

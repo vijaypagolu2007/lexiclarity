@@ -6,6 +6,7 @@ by spacing calls. Re-run whenever prompts or the sample change.
 
     python scripts/generate_showcase.py
 """
+
 from __future__ import annotations
 
 import json
@@ -36,7 +37,10 @@ def call(name: str, prompt: str, payload: str) -> dict:
             return result
         except (RuntimeError, OSError, TimeoutError, ConnectionError) as e:
             wait = 25 * (attempt + 1)
-            print(f"  attempt {attempt + 1} failed ({type(e).__name__}); retrying in {wait}s", flush=True)
+            print(
+                f"  attempt {attempt + 1} failed ({type(e).__name__}); retrying in {wait}s",
+                flush=True,
+            )
             time.sleep(wait)
     raise RuntimeError(f"showcase generation failed at: {name}")
 
@@ -56,7 +60,8 @@ def main() -> None:
 
     if "simplify_summary" not in data:
         data["simplify_summary"] = call(
-            "simplify", "simplify",
+            "simplify",
+            "simplify",
             f"reading_level: summary\ntarget_language: English\n\ndocument_text:\n{doc_a}",
         )
         _save()
@@ -65,7 +70,8 @@ def main() -> None:
         _save()
     if "clarify_indemnity" not in data:
         data["clarify_indemnity"] = call(
-            "clarify", "clarify",
+            "clarify",
+            "clarify",
             "clause_text:\nThe Tenant shall indemnify and hold harmless the Landlord from and against any and all "
             "claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the "
             "Tenant's use or occupation of the Premises, without any limitation as to amount."
@@ -73,12 +79,15 @@ def main() -> None:
         )
         _save()
     if "compare" not in data:
-        data["compare"] = call("compare", "compare", f"document_a:\n{doc_a}\n\ndocument_b:\n{doc_b}")
+        data["compare"] = call(
+            "compare", "compare", f"document_a:\n{doc_a}\n\ndocument_b:\n{doc_b}"
+        )
         _save()
 
     if "next_steps_indemnity" not in data:
         data["next_steps_indemnity"] = call(
-            "next_steps", "next_steps",
+            "next_steps",
+            "next_steps",
             "clause_heading: 8. Indemnity\n"
             "risk_reason: Unlimited indemnity with no cap, tenant bears all legal fees.\n"
             "clause_text:\nThe Tenant shall indemnify and hold harmless the Landlord from and against any and all "
@@ -88,7 +97,9 @@ def main() -> None:
         )
         _save()
     if "lawyer_prep" not in data:
-        data["lawyer_prep"] = call("lawyer_prep", "lawyer_prep", f"document_text:\n{doc_a}")
+        data["lawyer_prep"] = call(
+            "lawyer_prep", "lawyer_prep", f"document_text:\n{doc_a}"
+        )
         _save()
 
     chat_qa = data.setdefault("chat_answers", {})
@@ -101,7 +112,8 @@ def main() -> None:
             continue
         chunks = retrieve(q, doc_a, k=5)
         chat_qa[q] = call(
-            f"chat: {q}", "chat",
+            f"chat: {q}",
+            "chat",
             f"question: {q}\n\ncontext_chunks:\n{json.dumps(chunks, ensure_ascii=False)}\n\ndocument_text:\n{doc_a}",
         )
         _save()

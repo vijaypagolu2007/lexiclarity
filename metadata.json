@@ -1,0 +1,6 @@
+{
+  "name": "LexiClarity",
+  "description": "AI for Legal Accessibility — helps non-lawyers understand contracts, simplify clauses, assess risk, compare versions, and prepare for legal consultations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,106 +1,25 @@
-"""FR-1: Document text extraction for PDF, DOCX and plain text.
+"""Text extraction module for legal documents."""
 
-Everything runs in-memory; nothing is written to disk (PRD §6 privacy).
-"""
 from __future__ import annotations
 
 import io
-import re
 
 
-class ExtractionError(Exception):
-    """Raised with a user-friendly message when a file cannot be read."""
+def extract_text(filename: str, content: bytes | str) -> str:
+    """Extract plain text from string or byte input (txt, pdf, md)."""
+    if isinstance(content, str):
+        return content.strip()
 
-
-def extract_text(filename: str, data: bytes) -> str:
-    """Return plain text from an uploaded file's raw bytes."""
-    name = (filename or "").lower()
+    name = filename.lower()
     if name.endswith(".pdf"):
-        return _from_pdf(data)
-    if name.endswith(".docx"):
-        return _from_docx(data)
-    if name.endswith((".txt", ".md", ".text")):
-        return _from_txt(data)
-    raise ExtractionError(
-        f"Unsupported file type for '{filename}'. Please upload a PDF, DOCX, or TXT file."
-    )
-
-
-def _from_pdf(data: bytes) -> str:
-    try:
-        import pdfplumber
-    except ImportError as e:  # pragma: no cover
-        raise ExtractionError("PDF support is not installed (pdfplumber).") from e
-    try:
-        with pdfplumber.open(io.BytesIO(data)) as pdf:
-            pages = [(p.extract_text() or "") for p in pdf.pages]
-    except Exception as e:
-        raise ExtractionError(
-            "This PDF could not be read — it may be corrupted or password-protected."
-        ) from e
-    text = "\n\n".join(t for t in pages if t.strip()).strip()
-    if len(text) < 20:
-        raise ExtractionError(
-            "No readable text found in this PDF. It is probably a scanned image; "
-            "please upload a text-based PDF or paste the text directly."
-        )
-    return text
-
-
-def _from_docx(data: bytes) -> str:
-    try:
-        import docx
-        from docx.table import Table
-        from docx.text.paragraph import Paragraph
-    except ImportError as e:  # pragma: no cover
-        raise ExtractionError("DOCX support is not installed (python-docx).") from e
-    try:
-        doc = docx.Document(io.BytesIO(data))
-    except Exception as e:
-        raise ExtractionError("This DOCX file could not be read — it may be corrupted.") from e
-
-    # Walk the document body in order so TABLES are preserved alongside
-    # paragraphs — contracts keep rent, deposits and fee schedules in tables.
-    def _table_text(table) -> str:
-        rows = []
-        for row in table.rows:
-            cells = [re.sub(r"\s+", " ", c.text).strip() for c in row.cells]
-            if any(cells):
-                rows.append(" | ".join(cells))
-        return "\n".join(rows)
-
-    parts: list[str] = []
-    for child in doc.element.body.iterchildren():
-        if child.tag.endswith("}p"):
-            para = Paragraph(child, doc)
-            if para.text.strip():
-                parts.append(para.text.strip())
-        elif child.tag.endswith("}tbl"):
-            tbl = _table_text(Table(child, doc))
-            if tbl:
-                parts.append(tbl)
-    text = "\n".join(parts).strip()
-    if len(text) < 20:
-        raise ExtractionError("No readable text found in this DOCX file.")
-    return text
-
-
-def _from_txt(data: bytes) -> str:
-    for enc in ("utf-8", "latin-1"):
         try:
-            text = data.decode(enc).strip()
-            if len(text) >= 20:
-                return text
-        except UnicodeDecodeError:
-            continue
-    raise ExtractionError("The text file is empty or could not be decoded.")
+            import pypdf
 
+            reader = pypdf.PdfReader(io.BytesIO(content))
+            pages_text = [page.extract_text() or "" for page in reader.pages]
+            return "\n\n".join(pages_text).strip()
+        except ImportError:
+            # Fallback naive decode if pypdf is not installed
+            return content.decode("utf-8", errors="ignore").strip()
 
-def _looks_like_text(data: bytes) -> bool:
-    if b"\x00" in data[:4096]:
-        return False
-    try:
-        data[:4096].decode("utf-8")
-        return True
-    except UnicodeDecodeError:
-        return False
+    return content.decode("utf-8", errors="replace").strip()

@@ -1,1 +1,1 @@
-"""Test suite package for LexiClarity."""
+"""Test suite for LexiClarity."""

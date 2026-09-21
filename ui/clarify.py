@@ -1,91 +1,43 @@
+"""Clarify UI and orchestration layer with Jev decision routing."""
+
 from __future__ import annotations
 
-import json
+from typing import Any
 
-import pandas as pd
-import streamlit as st
-from pydantic import BaseModel, Field
-
-from core.gemini import call_gemini_structured_cached
-from core.security import render_safe_badge, sanitize_text
-from ui.components.audio import render_audio_player
-
-
-class ClauseAnalysis(BaseModel):
-    summary: str
-    risk_level: str = Field(description="LOW, MEDIUM, or HIGH")
-    risk_rationale: str
-    grounded_quote: str
+from src.decision_engine import (
+    DecisionEngine,
+    DecisionResult,
+    get_decision_engine,
+)
+from src.llm import run_task
+from ui.chat import format_debug_decision_panel
 
 
-@st.fragment
-def render(clauses: list[str] | None = None) -> None:
-    st.subheader("⚡ Clause Clarifier")
-    if not clauses:
-        clauses = st.session_state.get("clauses", [])
-    if not clauses:
-        st.info("👈 Please upload a legal agreement or load a sample from the sidebar to clarify clauses.")
-        return
+def handle_clarify_clause(
+    clause_text: str,
+    document_text: str = "",
+    decision_engine: DecisionEngine | None = None,
+) -> dict[str, Any]:
+    """Orchestrate clause clarification: Jev decision -> deterministic evaluation -> Gemini explanation."""
+    engine = decision_engine or get_decision_engine()
 
-    selected_idx = st.selectbox(
-        "Select a clause to clarify:",
-        range(len(clauses)),
-        format_func=lambda i: f"Clause {i+1}: {clauses[i][:70]}...",
+    # Step 1: Evaluate structured decision signals via Jev
+    decision: DecisionResult = engine.decide(
+        user_query="Clarify legal meaning, ambiguity, and risks in this clause.",
+        document_context=document_text[:4000] if document_text else None,
+        clause_text=clause_text,
     )
 
-    clause_text = clauses[selected_idx]
-    st.info(f"**Selected Text:** {sanitize_text(clause_text)}")
+    debug_panel = format_debug_decision_panel(decision)
 
-    # Explicit screen reader labels and help attributes
-    if st.button(
-        "Analyze Selected Clause",
-        key="btn_analyze_clause",
-        help="Run AI clarification on the chosen clause",
-    ):
-        with st.spinner("Analyzing risk and obligations..."):
-            try:
-                res = call_gemini_structured_cached(
-                    prompt=f"Analyze this legal clause:\n{clause_text}",
-                    schema_json=json.dumps(ClauseAnalysis.model_json_schema(), sort_keys=True),
-                )
+    # Step 2: Invoke Gemini natural-language explanation
+    payload = f"clause_text:\n{clause_text}\n\ndocument_text:\n{document_text[:20000]}"
+    gemini_result = run_task("clarify", payload)
 
-                # Accessible text badge
-                st.markdown(render_safe_badge(res.get("risk_level", "MEDIUM"), res.get("risk_rationale", "")))
-                st.markdown(
-                    f"**Plain-English Explanation:** {sanitize_text(res.get('summary', ''))}"
-                )
-                st.caption(
-                    f"🔍 **Source Grounding:** *'{sanitize_text(res.get('grounded_quote', ''))}'*"
-                )
-
-                # Audio control with accessible label
-                if st.button(
-                    "🔊 Listen to plain-English explanation",
-                    key="btn_audio_play",
-                    help="Accessible audio readout of summary",
-                ):
-                    render_audio_player(res.get("summary", ""))
-            except ValueError as e:
-                st.error(f"Analysis error: {sanitize_text(str(e))}")
-
-    # Accessible Radar Chart Alternative
-    st.markdown("### Clause Risk Distribution")
-    # Render the chart if available, but ALWAYS render the data table:
-    risk_data = [
-        {
-            "Clause": "Termination",
-            "Risk": "High",
-            "Impact": "30-day notice with immediate forfeit",
-        },
-        {
-            "Clause": "Indemnity",
-            "Risk": "Medium",
-            "Impact": "Mutual indemnity capped at contract value",
-        },
-        {"Clause": "Jurisdiction", "Risk": "Low", "Impact": "Local state courts"},
-    ]
-    df = pd.DataFrame(risk_data)
-    st.dataframe(df, use_container_width=True)
-    st.caption(
-        "Accessible summary table reflecting the legal risk distribution above."
-    )
+    return {
+        "plain_english": gemini_result.get("plain_english", ""),
+        "key_points": gemini_result.get("key_points", []),
+        "potential_pitfalls": gemini_result.get("potential_pitfalls", []),
+        "decision": decision.to_dict(),
+        "debug_panel": debug_panel,
+    }
