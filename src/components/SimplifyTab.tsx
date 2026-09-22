@@ -4,7 +4,8 @@ import { checkItems, groundedRate } from '../utils/grounding';
 import { speakText, stopSpeaking } from '../utils/speech';
 import { exportAsPdf, exportAsTxt } from '../utils/export';
 import { ExportDropdown } from './ExportDropdown';
-import { BookOpen, Volume2, VolumeX, Copy, Check, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, Copy, Check, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { DocumentPdfPreview } from './DocumentPdfPreview';
 
 interface SimplifyTabProps {
   docText: string;
@@ -34,6 +35,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+  const [previewCitation, setPreviewCitation] = useState<string | null>(null);
 
   const handleSimplify = async () => {
     if (!docText) {
@@ -80,19 +82,32 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
     setExpandedSources((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const [activeSpeechLang, setActiveSpeechLang] = useState<string | null>(null);
+
   const handleAudioToggle = () => {
     if (isPlayingAudio) {
       stopSpeaking();
       setIsPlayingAudio(false);
+      setActiveSpeechLang(null);
     } else if (result?.sections) {
       const fullSpeechText = result.sections.map((s) => `${s.original_heading}. ${s.plain_text}`).join(' ');
       setIsPlayingAudio(true);
-      speakText(
+      const speechLang = result.language || language || 'English';
+      const stopFn = speakText(
         fullSpeechText,
-        language,
-        () => setIsPlayingAudio(false),
-        () => setIsPlayingAudio(false)
+        speechLang,
+        () => {
+          setIsPlayingAudio(false);
+          setActiveSpeechLang(null);
+        },
+        () => {
+          setIsPlayingAudio(false);
+          setActiveSpeechLang(null);
+        }
       );
+      if (stopFn.detectedLanguage) {
+        setActiveSpeechLang(stopFn.detectedLanguage.langName);
+      }
     }
   };
 
@@ -225,7 +240,32 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
             onChange={(e) => setLanguage(e.target.value)}
             className="text-xs rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-600"
           >
-            {['English', 'Hindi', 'Spanish', 'Tamil', 'Telugu'].map((l) => (
+            {[
+              'English',
+              'Hindi',
+              'Spanish',
+              'Tamil',
+              'Telugu',
+              'Kannada',
+              'Malayalam',
+              'Bengali',
+              'Gujarati',
+              'Marathi',
+              'Punjabi',
+              'French',
+              'German',
+              'Italian',
+              'Portuguese',
+              'Russian',
+              'Japanese',
+              'Korean',
+              'Chinese (Mandarin)',
+              'Arabic',
+              'Dutch',
+              'Polish',
+              'Turkish',
+              'Vietnamese',
+            ].map((l) => (
               <option key={l} value={l}>
                 {l}
               </option>
@@ -281,15 +321,17 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={handleAudioToggle}
-                className={`px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   isPlayingAudio
-                    ? 'bg-amber-600 text-white border-amber-600'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs animate-pulse'
                     : 'bg-white border-stone-200 hover:bg-stone-100 text-stone-700'
                 }`}
-                title="In-browser audio readout"
+                title="Auto-detect text language and speak with corresponding voice"
               >
-                {isPlayingAudio ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                {isPlayingAudio ? 'Stop Audio' : `Read Aloud (${language})`}
+                {isPlayingAudio ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-amber-700" />}
+                {isPlayingAudio
+                  ? `Stop Reading (${activeSpeechLang || 'Auto-Voice'})`
+                  : 'Read Aloud 🔊'}
               </button>
 
               <button
@@ -340,21 +382,30 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
 
                   {/* Verbatim Source Quote Dropdown */}
                   {section.source_span && (
-                    <div className="pt-2 border-t border-stone-100">
+                    <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
                       <button
                         onClick={() => toggleSource(section.section_id || String(idx))}
-                        className="text-xs text-amber-800 hover:text-amber-900 font-medium flex items-center gap-1"
+                        className="text-xs text-stone-600 hover:text-stone-900 font-medium flex items-center gap-1"
                       >
                         <span>Original contract clause citation</span>
                         {isSourceExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
 
-                      {isSourceExpanded && (
-                        <blockquote className="mt-2 text-xs italic text-stone-600 bg-stone-50 p-3 rounded-lg border-l-2 border-amber-600 font-serif leading-relaxed">
-                          "{section.source_span}"
-                        </blockquote>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewCitation(section.source_span)}
+                        className="text-[11px] bg-yellow-200 hover:bg-yellow-300 text-stone-950 px-2.5 py-1 rounded-md font-bold flex items-center gap-1 border border-amber-400 transition-colors shadow-2xs"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-amber-900" />
+                        View in PDF Preview 📄
+                      </button>
                     </div>
+                  )}
+
+                  {isSourceExpanded && section.source_span && (
+                    <blockquote className="mt-2 text-xs italic text-stone-600 bg-stone-50 p-3 rounded-lg border-l-2 border-amber-600 font-serif leading-relaxed">
+                      "{section.source_span}"
+                    </blockquote>
                   )}
                 </div>
               );
@@ -391,6 +442,21 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
           <p className="text-xs text-stone-500 mt-1 max-w-md mx-auto">
             Choose a reading level and language above, then click <strong>✨ Simplify</strong> to translate this contract into clear English or regional languages.
           </p>
+        </div>
+      )}
+
+      {/* PDF Highlighted Citation Preview Modal */}
+      {previewCitation && (
+        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
+          <div className="w-full max-w-4xl h-[85vh]">
+            <DocumentPdfPreview
+              docText={docText}
+              docTitle="Simplified Clause Source Citation"
+              highlightText={previewCitation}
+              onClose={() => setPreviewCitation(null)}
+              isModal={true}
+            />
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChatMessage } from '../types';
-import { MessageSquare, Send, ShieldAlert, Sparkles, User, Bot, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageSquare, Send, ShieldAlert, Sparkles, User, Bot, Trash2, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { speakText, stopSpeaking } from '../utils/speech';
 
 interface ChatTabProps {
   docText: string;
@@ -44,6 +45,34 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   const [input, setInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [expandedCitations, setExpandedCitations] = useState<Record<string, boolean>>({});
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const [activeVoiceLang, setActiveVoiceLang] = useState<string | null>(null);
+
+  const handleSpeakMessage = (msgId: string, text: string) => {
+    if (speakingMessageId === msgId) {
+      stopSpeaking();
+      setSpeakingMessageId(null);
+      setActiveVoiceLang(null);
+    } else {
+      stopSpeaking();
+      setSpeakingMessageId(msgId);
+      const stopFn = speakText(
+        text,
+        'English',
+        () => {
+          setSpeakingMessageId(null);
+          setActiveVoiceLang(null);
+        },
+        () => {
+          setSpeakingMessageId(null);
+          setActiveVoiceLang(null);
+        }
+      );
+      if (stopFn.detectedLanguage) {
+        setActiveVoiceLang(stopFn.detectedLanguage.langName);
+      }
+    }
+  };
 
   const handleSend = async (questionText?: string) => {
     const q = (questionText || input).trim();
@@ -182,9 +211,32 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                     : 'bg-stone-50 border border-stone-200 text-stone-800 rounded-bl-xs'
                 }`}
               >
-                <p className="leading-relaxed whitespace-pre-wrap font-sans">
-                  {m.content}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="leading-relaxed whitespace-pre-wrap font-sans flex-1">
+                    {m.content}
+                  </p>
+                  {!isUser && (
+                    <button
+                      onClick={() => handleSpeakMessage(m.id, m.content)}
+                      className={`p-1 rounded-md text-xs transition-colors flex-shrink-0 ${
+                        speakingMessageId === m.id
+                          ? 'bg-amber-600 text-white animate-pulse'
+                          : 'text-stone-400 hover:text-amber-700 hover:bg-stone-200/60'
+                      }`}
+                      title={
+                        speakingMessageId === m.id
+                          ? `Stop reading (${activeVoiceLang || 'Auto-Voice'})`
+                          : 'Listen (Auto-detect language voice)'
+                      }
+                    >
+                      {speakingMessageId === m.id ? (
+                        <VolumeX className="w-3.5 h-3.5" />
+                      ) : (
+                        <Volume2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {m.advice_declined && (
                   <div className="p-2 rounded bg-amber-100/70 border border-amber-200 text-amber-900 text-xs flex items-center gap-1.5 font-medium">

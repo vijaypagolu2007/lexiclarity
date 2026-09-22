@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <p className="text-xs text-stone-700 hidden sm:block">
-              Plain-language legal comprehension, risk mapping & lawyer preparation
+              Plain-language legal comprehension, risk mapping & comparison
             </p>
           </div>
         </div>

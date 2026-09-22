@@ -4,14 +4,13 @@ import { checkItems } from '../utils/grounding';
 import { CATEGORIES, scoreClauses } from '../utils/scoring';
 import { exportAsPdf, exportAsTxt } from '../utils/export';
 import { ExportDropdown } from './ExportDropdown';
-import { Compass, ShieldAlert, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import { Compass, ShieldAlert, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { DocumentPdfPreview } from './DocumentPdfPreview';
 
 interface ExplorerTabProps {
   docText: string;
   onOpenDocPrompt: () => void;
-  onNavigateToClarify?: (clauseText: string) => void;
-  onNavigateToNegotiate?: (clauseText: string) => void;
   data?: { clauses: ClauseItem[]; health: HealthScore } | null;
   onResultChange?: (data: { clauses: ClauseItem[]; health: HealthScore } | null) => void;
 }
@@ -19,8 +18,6 @@ interface ExplorerTabProps {
 export const ExplorerTab: React.FC<ExplorerTabProps> = ({
   docText,
   onOpenDocPrompt,
-  onNavigateToClarify,
-  onNavigateToNegotiate,
   data: externalData,
   onResultChange,
 }) => {
@@ -42,6 +39,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
   };
   const [error, setError] = useState<string | null>(null);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+  const [previewCitation, setPreviewCitation] = useState<string | null>(null);
 
   const handleBuildMap = async () => {
     if (!docText) {
@@ -426,36 +424,23 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
 
                     {/* Source span toggle */}
                     {clause.source_span && (
-                      <div className="pt-2 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2">
+                      <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
                         <button
                           onClick={() => toggleSource(clause.section_id || String(idx))}
-                          className="text-xs text-amber-800 hover:text-amber-900 font-medium flex items-center gap-1"
+                          className="text-xs text-stone-600 hover:text-stone-900 font-medium flex items-center gap-1"
                         >
                           <span>{clause.grounded ? '✅ Grounded citation' : '⚠️ Source citation'}</span>
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
 
-                        <div className="flex items-center gap-2">
-                          {onNavigateToClarify && (
-                            <button
-                              onClick={() => onNavigateToClarify(clause.source_span || clause.summary)}
-                              className="text-[11px] text-stone-600 hover:text-amber-800 font-medium flex items-center gap-1"
-                            >
-                              <span>Clarify</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          )}
-
-                          {clause.risk_level === 'High' && onNavigateToNegotiate && (
-                            <button
-                              onClick={() => onNavigateToNegotiate(clause.source_span || clause.summary)}
-                              className="text-[11px] text-amber-700 hover:text-amber-900 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"
-                            >
-                              <span>Draft Counter-Clause</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewCitation(clause.source_span)}
+                          className="text-[11px] bg-yellow-200 hover:bg-yellow-300 text-stone-950 px-2.5 py-1 rounded-md font-bold flex items-center gap-1 border border-amber-400 transition-colors shadow-2xs"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-amber-900" />
+                          View in PDF Preview 📄
+                        </button>
                       </div>
                     )}
 
@@ -468,6 +453,21 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Highlighted Citation Preview Modal */}
+      {previewCitation && (
+        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
+          <div className="w-full max-w-4xl h-[85vh]">
+            <DocumentPdfPreview
+              docText={docText}
+              docTitle="Contract Clause Source Citation"
+              highlightText={previewCitation}
+              onClose={() => setPreviewCitation(null)}
+              isModal={true}
+            />
           </div>
         </div>
       )}

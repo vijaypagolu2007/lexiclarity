@@ -36,7 +36,7 @@ function getValidGeminiModel(): string {
   ) {
     return envModel;
   }
-  return 'gemini-3.6-flash';
+  return 'gemini-3.8-flash';
 }
 
 const MODEL_NAME = getValidGeminiModel();
@@ -99,10 +99,20 @@ async function callGeminiJson(promptName: string, payload: string): Promise<any>
   const taskPrompt = getPrompt(promptName);
   const fullPrompt = `${taskPrompt}\n\n===== INPUT =====\n${payload}`;
 
-  const candidateModels = Array.from(new Set([MODEL_NAME, 'gemini-3.6-flash', 'gemini-3.8-flash']));
+  // Diverse candidate list across model series to bypass single-model rate limits or temporary high demand
+  const candidateModels = Array.from(
+    new Set([
+      MODEL_NAME,
+      'gemini-3.8-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+    ])
+  );
 
   let lastError: any = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const maxAttempts = candidateModels.length * 2;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const currentModel = candidateModels[attempt % candidateModels.length];
     try {
       const response = await ai.models.generateContent({
@@ -122,12 +132,27 @@ async function callGeminiJson(promptName: string, payload: string): Promise<any>
       return cleanJsonResponse(text);
     } catch (err: any) {
       lastError = err;
-      console.warn(`[LexiClarity AI] (Model: ${currentModel}) Attempt ${attempt + 1} failed:`, err?.message || err);
-      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      const msg = err?.message || String(err);
+      console.warn(`[LexiClarity AI] (Model: ${currentModel}) Attempt ${attempt + 1}/${maxAttempts} failed:`, msg);
+
+      // Back off if hit rate limit (429) or service unavailable (503)
+      const isRateLimit = msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+      const isUnavailable = msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE');
+
+      if (isRateLimit || isUnavailable) {
+        const delayMs = Math.min(1500 * Math.pow(1.3, attempt), 4000);
+        await new Promise((r) => setTimeout(r, delayMs));
+      } else {
+        await new Promise((r) => setTimeout(r, 600));
+      }
     }
   }
 
-  throw new Error(`AI generation failed: ${lastError?.message || 'Unknown error'}`);
+  const isQuota = lastError?.message?.includes('429') || lastError?.message?.includes('quota');
+  if (isQuota) {
+    throw new Error('Gemini API free tier rate limit temporarily reached. Please retry in a few seconds or use the pre-loaded sample document.');
+  }
+  throw new Error(`AI processing error: ${lastError?.message || 'The AI service is temporarily unavailable. Please retry shortly.'}`);
 }
 
 // ----------------------------------------------------

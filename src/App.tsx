@@ -2,37 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import { Sidebar } from './components/Sidebar';
-import { DownloadButton } from './components/DownloadButton';
 import { SimplifyTab } from './components/SimplifyTab';
 import { ExplorerTab } from './components/ExplorerTab';
-import { ClarifyTab } from './components/ClarifyTab';
 import { CompareTab } from './components/CompareTab';
 import { ChatTab } from './components/ChatTab';
-import { LawyerPrepTab } from './components/LawyerPrepTab';
-import { NegotiateTab } from './components/NegotiateTab';
-import {
-  BookOpen,
-  Compass,
-  Zap,
-  GitCompare,
-  MessageSquare,
-  Briefcase,
-  Handshake,
-} from 'lucide-react';
+import { BookOpen, Compass, GitCompare, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { downloadActiveContent } from './utils/export';
 import {
   SimplifyResult,
   ClauseItem,
   HealthScore,
-  ClarifyResult,
   CompareResult,
   ChatMessage,
-  LawyerPrepResult,
-  NegotiationResult,
+  LoadedDocument,
 } from './types';
 
-type TabId = 'simplify' | 'explorer' | 'clarify' | 'compare' | 'chat' | 'lawyer-prep' | 'negotiate';
+type TabId = 'simplify' | 'explorer' | 'compare' | 'chat';
 
 interface TabItem {
   id: TabId;
@@ -43,43 +29,32 @@ interface TabItem {
 const TABS: TabItem[] = [
   { id: 'simplify', label: 'Simplify', icon: BookOpen },
   { id: 'explorer', label: 'Clause Explorer', icon: Compass },
-  { id: 'clarify', label: 'Clarify', icon: Zap },
   { id: 'compare', label: 'Compare', icon: GitCompare },
   { id: 'chat', label: 'Document Chat', icon: MessageSquare },
-  { id: 'lawyer-prep', label: 'Lawyer Prep', icon: Briefcase },
-  { id: 'negotiate', label: 'Negotiate', icon: Handshake },
 ];
 
 export function App() {
   const [activeTab, setActiveTab] = useState<TabId>('simplify');
-  const [docText, setDocText] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('sample_rental_agreement.txt');
-  const [docBText, setDocBText] = useState<string>('');
+  const [docsLibrary, setDocsLibrary] = useState<LoadedDocument[]>([]);
+  const [activeDocId, setActiveDocId] = useState<string>('');
+  const [compareDocAId, setCompareDocAId] = useState<string>('');
+  const [compareDocBId, setCompareDocBId] = useState<string>('');
+
   const [sampleOriginal, setSampleOriginal] = useState<string>('');
   const [sampleRevised, setSampleRevised] = useState<string>('');
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
   const [isShowcase, setIsShowcase] = useState<boolean>(true);
 
-  // Active processed state per tab for persistence and universal export
+  // Active processed state per tab
   const [simplifyResult, setSimplifyResult] = useState<SimplifyResult | null>(null);
   const [explorerData, setExplorerData] = useState<{ clauses: ClauseItem[]; health: HealthScore } | null>(null);
-  const [clarifyResult, setClarifyResult] = useState<ClarifyResult | null>(null);
   const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [lawyerPrepResult, setLawyerPrepResult] = useState<LawyerPrepResult | null>(null);
-  const [negotiateResult, setNegotiateResult] = useState<NegotiationResult | null>(null);
-
-  // Cross-tab interaction states
-  const [initialClarifyClause, setInitialClarifyClause] = useState<string>('');
-  const [initialNegotiateClause, setInitialNegotiateClause] = useState<string>('');
 
   useEffect(() => {
-    // Check server health and fetch sample agreements
     fetch('/api/health')
       .then((res) => res.json())
-      .then((data) => {
-        setHasApiKey(Boolean(data.hasApiKey));
-      })
+      .then((data) => setHasApiKey(Boolean(data.hasApiKey)))
       .catch((err) => console.warn('Health check warning:', err));
 
     fetch('/api/sample')
@@ -87,91 +62,122 @@ export function App() {
       .then((data) => {
         if (data.original) {
           setSampleOriginal(data.original);
-          setDocText(data.original);
-          setFileName('sample_rental_agreement.txt');
-        }
-        if (data.revised) {
-          setSampleRevised(data.revised);
-          setDocBText(data.revised);
+          setSampleRevised(data.revised || '');
+
+          const doc1: LoadedDocument = {
+            id: 'sample_original',
+            name: 'sample_rental_agreement.txt',
+            text: data.original,
+            wordCount: data.original.trim().split(/\s+/).length,
+            clauseCount: data.original.split('\n\n').filter((c: string) => c.trim().length > 30).length,
+          };
+
+          const doc2: LoadedDocument = {
+            id: 'sample_revised',
+            name: 'sample_rental_agreement_revised.txt',
+            text: data.revised || data.original,
+            wordCount: (data.revised || data.original).trim().split(/\s+/).length,
+            clauseCount: (data.revised || data.original).split('\n\n').filter((c: string) => c.trim().length > 30).length,
+          };
+
+          setDocsLibrary([doc1, doc2]);
+          setActiveDocId(doc1.id);
+          setCompareDocAId(doc1.id);
+          setCompareDocBId(doc2.id);
         }
       })
       .catch((err) => console.warn('Failed to load sample text:', err));
   }, []);
 
-  const handleTextLoaded = (name: string, text: string) => {
-    setFileName(name);
-    setDocText(text);
-    setIsShowcase(false);
-    // Reset cached analysis on new doc upload
+  // Multi-upload handler populating central docsLibrary
+  const handleUploadDocs = async (files: FileList) => {
+    const newDocs: LoadedDocument[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const text = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve((e.target?.result as string) || '');
+        reader.readAsText(file);
+      });
+
+      if (text) {
+        newDocs.push({
+          id: `doc_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
+          name: file.name,
+          text,
+          wordCount: text.trim().split(/\s+/).length,
+          clauseCount: text.split('\n\n').filter((c) => c.trim().length > 30).length,
+        });
+      }
+    }
+
+    if (newDocs.length > 0) {
+      setDocsLibrary((prev) => [...newDocs, ...prev]);
+      setActiveDocId(newDocs[0].id);
+      setIsShowcase(false);
+      setSimplifyResult(null);
+      setExplorerData(null);
+      setCompareResult(null);
+    }
+  };
+
+  const handleSelectActiveDoc = (id: string) => {
+    setActiveDocId(id);
     setSimplifyResult(null);
     setExplorerData(null);
-    setClarifyResult(null);
-    setLawyerPrepResult(null);
-    setNegotiateResult(null);
+  };
+
+  const handleRemoveDoc = (id: string) => {
+    setDocsLibrary((prev) => {
+      const filtered = prev.filter((d) => d.id !== id);
+      if (activeDocId === id && filtered.length > 0) {
+        setActiveDocId(filtered[0].id);
+      }
+      return filtered;
+    });
   };
 
   const handleLoadSample = () => {
-    if (sampleOriginal) {
-      setDocText(sampleOriginal);
-      setFileName('sample_rental_agreement.txt');
+    const sampleDoc = docsLibrary.find((d) => d.id === 'sample_original');
+    if (sampleDoc) {
+      setActiveDocId(sampleDoc.id);
       setIsShowcase(true);
       setSimplifyResult(null);
       setExplorerData(null);
-      setClarifyResult(null);
-      setLawyerPrepResult(null);
-      setNegotiateResult(null);
     }
   };
 
   const handleLoadComparePair = () => {
-    if (sampleOriginal && sampleRevised) {
-      setDocText(sampleOriginal);
-      setDocBText(sampleRevised);
-      setFileName('sample_rental_agreement.txt');
-      setActiveTab('compare');
-      setIsShowcase(true);
-    }
+    setCompareDocAId('sample_original');
+    setCompareDocBId('sample_revised');
+    setActiveTab('compare');
+    setIsShowcase(true);
   };
 
-  const handleNavigateToClarify = (clause: string) => {
-    setInitialClarifyClause(clause);
-    setActiveTab('clarify');
-  };
+  const activeDoc = docsLibrary.find((d) => d.id === activeDocId) || docsLibrary[0];
+  const activeDocText = activeDoc?.text || '';
+  const activeFileName = activeDoc?.name || 'Document';
 
-  const handleNavigateToNegotiate = (clause: string) => {
-    setInitialNegotiateClause(clause);
-    setActiveTab('negotiate');
-  };
+  const docAObj = docsLibrary.find((d) => d.id === compareDocAId) || docsLibrary[0];
+  const docBObj = docsLibrary.find((d) => d.id === compareDocBId) || docsLibrary[1] || docsLibrary[0];
 
-  // Download handler for current active tab
   const handleDownload = (format: 'pdf' | 'txt' = 'pdf') => {
     downloadActiveContent(
       {
         activeTab,
-        fileName,
-        docText,
-        docBText,
+        fileName: activeFileName,
+        docText: activeDocText,
+        docBText: docBObj?.text || '',
         simplifyResult,
         explorerResult: explorerData,
-        clarifyResult,
         compareResult,
         chatMessages,
-        lawyerPrepResult,
-        negotiateResult,
       },
       format
     );
   };
 
   const activeTabLabel = TABS.find((t) => t.id === activeTab)?.label || 'Document';
-
-  // Split document into clauses for dropdown selection
-  const extractedClauses = docText
-    ? docText
-        .split('\n\n')
-        .map((c) => c.trim())
-        .filter((c) => c.length > 25)
-    : [];
 
   return (
     <div className="min-h-screen bg-stone-100 flex flex-col text-stone-900 selection:bg-amber-100 selection:text-amber-900">
@@ -184,19 +190,19 @@ export function App() {
       <DisclaimerBanner />
 
       <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto shadow-xs border-x border-stone-200 bg-white">
-        {/* Left Sidebar */}
+        {/* Unified Application Document Library Sidebar */}
         <Sidebar
-          fileName={fileName}
-          docText={docText}
-          onTextLoaded={handleTextLoaded}
+          docsLibrary={docsLibrary}
+          activeDocId={activeDocId}
+          onSelectActiveDoc={handleSelectActiveDoc}
+          onUploadDocs={handleUploadDocs}
           onLoadSample={handleLoadSample}
           onLoadComparePair={handleLoadComparePair}
-          isSampleActive={docText === sampleOriginal}
+          onRemoveDoc={handleRemoveDoc}
         />
 
-        {/* Main Content Area */}
+        {/* Main Workspace Area */}
         <main className="flex-1 flex flex-col min-w-0">
-          {/* Navigation Tabs Bar & Workspace Download Action */}
           <div className="border-b border-stone-200 bg-stone-50/60 px-4 sm:px-6 pt-3 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
             <nav className="flex space-x-1 sm:space-x-2 min-w-max pb-2.5">
               {TABS.map((tab) => {
@@ -218,18 +224,8 @@ export function App() {
                 );
               })}
             </nav>
-
-            {/* Workspace Area Download Button */}
-            <div className="hidden sm:flex items-center pb-2.5 flex-shrink-0">
-              <DownloadButton
-                onDownload={handleDownload}
-                activeTabLabel={activeTabLabel}
-                variant="workspace"
-              />
-            </div>
           </div>
 
-          {/* Tab Workspace Panel */}
           <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-white min-h-[500px]">
             <AnimatePresence mode="wait">
               <motion.div
@@ -241,7 +237,7 @@ export function App() {
               >
                 {activeTab === 'simplify' && (
                   <SimplifyTab
-                    docText={docText}
+                    docText={activeDocText}
                     onOpenDocPrompt={handleLoadSample}
                     result={simplifyResult}
                     onResultChange={setSimplifyResult}
@@ -250,31 +246,22 @@ export function App() {
 
                 {activeTab === 'explorer' && (
                   <ExplorerTab
-                    docText={docText}
+                    docText={activeDocText}
                     onOpenDocPrompt={handleLoadSample}
-                    onNavigateToClarify={handleNavigateToClarify}
-                    onNavigateToNegotiate={handleNavigateToNegotiate}
                     data={explorerData}
                     onResultChange={setExplorerData}
                   />
                 )}
 
-                {activeTab === 'clarify' && (
-                  <ClarifyTab
-                    clauses={extractedClauses}
-                    docText={docText}
-                    initialClauseText={initialClarifyClause}
-                    onOpenDocPrompt={handleLoadSample}
-                    result={clarifyResult}
-                    onResultChange={setClarifyResult}
-                  />
-                )}
-
                 {activeTab === 'compare' && (
                   <CompareTab
-                    initialDocA={docText}
-                    initialDocB={docBText}
+                    docsLibrary={docsLibrary}
+                    compareDocAId={compareDocAId}
+                    compareDocBId={compareDocBId}
+                    onSelectDocA={setCompareDocAId}
+                    onSelectDocB={setCompareDocBId}
                     onLoadComparePair={handleLoadComparePair}
+                    onUploadDocs={handleUploadDocs}
                     result={compareResult}
                     onResultChange={setCompareResult}
                   />
@@ -282,30 +269,10 @@ export function App() {
 
                 {activeTab === 'chat' && (
                   <ChatTab
-                    docText={docText}
+                    docText={activeDocText}
                     onOpenDocPrompt={handleLoadSample}
                     messages={chatMessages}
                     onMessagesChange={setChatMessages}
-                  />
-                )}
-
-                {activeTab === 'lawyer-prep' && (
-                  <LawyerPrepTab
-                    docText={docText}
-                    onOpenDocPrompt={handleLoadSample}
-                    result={lawyerPrepResult}
-                    onResultChange={setLawyerPrepResult}
-                  />
-                )}
-
-                {activeTab === 'negotiate' && (
-                  <NegotiateTab
-                    clauses={extractedClauses}
-                    docText={docText}
-                    initialClauseText={initialNegotiateClause}
-                    onOpenDocPrompt={handleLoadSample}
-                    result={negotiateResult}
-                    onResultChange={setNegotiateResult}
                   />
                 )}
               </motion.div>

@@ -40,16 +40,6 @@ export interface SimplifyResult {
   key_terms?: KeyTerm[];
 }
 
-export interface ClarifyResult {
-  plain_explanation: string;
-  risk_level: RiskLevel;
-  why_risky: string;
-  watch_out?: string | null;
-  confidence?: string;
-  evidence_type?: string;
-  source_span: string;
-}
-
 export interface CompareChange {
   topic: string;
   change_type: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -75,56 +65,6 @@ export interface ChatMessage {
   timestamp?: number;
 }
 
-export interface LawyerPrepParty {
-  name: string;
-  role: string;
-  responsibilities: string;
-}
-
-export interface LawyerPrepDate {
-  date_or_trigger: string;
-  what_happens: string;
-}
-
-export interface LawyerPrepFinancial {
-  item: string;
-  amount: string;
-  due: string;
-  source_span: string;
-}
-
-export interface LawyerPrepRisk {
-  risk: string;
-  why: string;
-  source_span: string;
-}
-
-export interface LawyerPrepTimelineItem {
-  when: string;
-  event: string;
-}
-
-export interface LawyerPrepResult {
-  case_summary: string;
-  parties: LawyerPrepParty[];
-  important_dates: LawyerPrepDate[];
-  financial_obligations: LawyerPrepFinancial[];
-  top_risks: LawyerPrepRisk[];
-  missing_or_ambiguous: string[];
-  questions_for_lawyer: string[];
-  documents_to_bring: string[];
-  timeline: LawyerPrepTimelineItem[];
-  confidence?: string;
-}
-
-export interface NegotiationResult {
-  negotiation_goal: string;
-  why_negotiate: string;
-  proposed_clause: string;
-  tradeoff: string;
-  source_span: string;
-}
-
 export interface HealthScore {
   overall: number;
   high_risk_count: number;
@@ -137,4 +77,13 @@ export interface GuardrailResult {
   document_kind: string;
   confidence: 'high' | 'medium' | 'low';
   reason: string;
+}
+
+export interface LoadedDocument {
+  id: string;
+  name: string;
+  text: string;
+  wordCount: number;
+  clauseCount: number;
+  uploadedAt?: number;
 }

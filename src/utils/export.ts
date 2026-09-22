@@ -17,17 +17,14 @@ export interface TabExportData {
 }
 
 export interface ActiveTabExportState {
-  activeTab: 'simplify' | 'explorer' | 'clarify' | 'compare' | 'chat' | 'lawyer-prep' | 'negotiate';
+  activeTab: 'simplify' | 'explorer' | 'compare' | 'chat';
   fileName: string;
   docText: string;
   docBText?: string;
   simplifyResult?: any;
   explorerResult?: any;
-  clarifyResult?: any;
   compareResult?: any;
   chatMessages?: any[];
-  lawyerPrepResult?: any;
-  negotiateResult?: any;
 }
 
 export function getActiveTabExportPayload(state: ActiveTabExportState): TabExportData {
@@ -38,11 +35,8 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
     docBText,
     simplifyResult,
     explorerResult,
-    clarifyResult,
     compareResult,
     chatMessages,
-    lawyerPrepResult,
-    negotiateResult,
   } = state;
 
   const baseFileName = (fileName || 'document').replace(/\.[^/.]+$/, '');
@@ -131,55 +125,11 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
       };
     }
 
-    case 'clarify': {
-      if (clarifyResult) {
-        return {
-          title: 'LexiClarity — Clause Clarification Report',
-          subtitle: `Risk Level: ${(clarifyResult.risk_level || 'Low').toUpperCase()}`,
-          filename: `lexiclarity_${baseFileName}_clause_clarification.pdf`,
-          metadata: {
-            'Risk Level': clarifyResult.risk_level || 'Low',
-            'Grounding Status': clarifyResult.grounded ? 'Verified Grounded' : 'Needs Review',
-          },
-          sections: [
-            {
-              heading: '1. Plain-English Explanation',
-              body: clarifyResult.plain_explanation,
-              badge: `${clarifyResult.risk_level} Risk`,
-            },
-            ...(clarifyResult.watch_out
-              ? [
-                  {
-                    heading: '2. What to Watch Out For',
-                    body: clarifyResult.watch_out,
-                  },
-                ]
-              : []),
-            ...(clarifyResult.source_span
-              ? [
-                  {
-                    heading: '3. Verbatim Source Clause',
-                    body: `"${clarifyResult.source_span}"`,
-                    note: clarifyResult.source_span,
-                  },
-                ]
-              : []),
-          ],
-        };
-      }
-      return {
-        title: 'LexiClarity — Clause Clarification',
-        subtitle: `File: ${fileName || 'Active Document'}`,
-        filename: `lexiclarity_${baseFileName}_clarification.pdf`,
-        sections: [{ heading: 'Document Sample', body: docText.slice(0, 1500) || 'No text loaded.' }],
-      };
-    }
-
     case 'compare': {
       if (compareResult) {
         return {
           title: 'LexiClarity — Contract Version Comparison & Redlines',
-          subtitle: `Overall Impact: ${compareResult.summary || 'Version comparison report'}`,
+          subtitle: `Overall Impact: ${compareResult.overall_assessment || 'Version comparison report'}`,
           filename: `lexiclarity_${baseFileName}_version_comparison.pdf`,
           metadata: {
             'Material Changes': `${(compareResult.changes || []).filter((c: any) => c.materiality === 'material').length}`,
@@ -187,12 +137,14 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
           },
           sections: [
             {
-              heading: '1. Executive Comparison Summary',
-              body: compareResult.summary,
+              heading: '1. Executive Comparison Assessment',
+              body: compareResult.overall_assessment,
             },
             ...(compareResult.changes || []).map((c: any, i: number) => ({
-              heading: `${i + 2}. ${c.clause_heading} [${(c.materiality || 'minor').toUpperCase()}]`,
-              body: `Original Version:\n"${c.original_text}"\n\nRevised Version:\n"${c.revised_text}"\n\nUser Impact & Legal Shift:\n${c.plain_explanation}`,
+              heading: `${i + 2}. ${c.topic} [${(c.materiality || 'minor').toUpperCase()} - ${(c.change_type || 'modified').toUpperCase()}]`,
+              body: `Summary:\n${c.summary}\n\nWhat changed for you:\n${c.user_impact}` +
+                (c.source_span_a ? `\n\nOriginal (Version A):\n"${c.source_span_a}"` : '') +
+                (c.source_span_b ? `\n\nRevised (Version B):\n"${c.source_span_b}"` : ''),
               badge: (c.materiality || 'minor').toUpperCase(),
             })),
           ],
@@ -218,7 +170,7 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
           const botM = validMessages[i + 1];
           if (userM && userM.role === 'user') {
             const citations = botM?.citations?.length
-              ? botM.citations.map((c: any) => `[${c.clause_ref}] "${c.quote}"`).join('\n')
+              ? botM.citations.map((c: any) => `[${c.clause_ref || 'Ref'}] "${c.quote || c}"`).join('\n')
               : undefined;
             sections.push({
               heading: `Q: ${userM.content}`,
@@ -243,150 +195,6 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
         subtitle: `File: ${fileName || 'Active Document'}`,
         filename: `lexiclarity_${baseFileName}_chat_context.pdf`,
         sections: [{ heading: 'Document Reference Text', body: docText || 'No document loaded.' }],
-      };
-    }
-
-    case 'lawyer-prep': {
-      if (lawyerPrepResult) {
-        return {
-          title: 'LexiClarity — 1-Page Lawyer Consultation Pack',
-          subtitle: 'Structured briefing pack for consultation with legal counsel',
-          filename: `lexiclarity_${baseFileName}_lawyer_prep.pdf`,
-          metadata: {
-            'Parties Count': `${lawyerPrepResult.parties?.length || 0}`,
-            'Risk Items': `${lawyerPrepResult.top_risks?.length || 0}`,
-            'Prepared For': fileName || 'Agreement',
-          },
-          sections: [
-            {
-              heading: '1. Executive Case Summary',
-              body: lawyerPrepResult.case_summary,
-            },
-            ...(lawyerPrepResult.parties?.length
-              ? [
-                  {
-                    heading: '2. Identified Parties & Roles',
-                    body: lawyerPrepResult.parties
-                      .map((p: any) => `• ${p.name} (${p.role}): ${p.responsibilities}`)
-                      .join('\n\n'),
-                  },
-                ]
-              : []),
-            ...(lawyerPrepResult.important_dates?.length
-              ? [
-                  {
-                    heading: '3. Critical Dates & Deadlines',
-                    body: lawyerPrepResult.important_dates
-                      .map((d: any) => `• ${d.date_or_trigger}: ${d.what_happens}`)
-                      .join('\n\n'),
-                  },
-                ]
-              : []),
-            ...(lawyerPrepResult.financial_obligations?.length
-              ? [
-                  {
-                    heading: '4. Financial Obligations & Triggers',
-                    body: lawyerPrepResult.financial_obligations
-                      .map((f: any) => `• ${f.item} — Amount: ${f.amount} (Due: ${f.due})\n  Source: "${f.source_span}"`)
-                      .join('\n\n'),
-                  },
-                ]
-              : []),
-            ...(lawyerPrepResult.top_risks?.length
-              ? [
-                  {
-                    heading: '5. Key Risks to Review With Counsel',
-                    body: lawyerPrepResult.top_risks
-                      .map((r: any) => `• ${r.risk}:\n  ${r.why}\n  Source: "${r.source_span}"`)
-                      .join('\n\n'),
-                  },
-                ]
-              : []),
-            ...(lawyerPrepResult.missing_or_ambiguous?.length
-              ? [
-                  {
-                    heading: '6. Missing or Ambiguous Terms',
-                    body: lawyerPrepResult.missing_or_ambiguous.map((m: any) => `• ${m}`).join('\n\n'),
-                  },
-                ]
-              : []),
-            ...(lawyerPrepResult.questions_for_lawyer?.length
-              ? [
-                  {
-                    heading: '7. Specific Questions to Ask Your Lawyer',
-                    body: lawyerPrepResult.questions_for_lawyer
-                      .map((q: any, i: number) => `${i + 1}. ${q}`)
-                      .join('\n\n'),
-                  },
-                ]
-              : []),
-            ...(lawyerPrepResult.documents_to_bring?.length
-              ? [
-                  {
-                    heading: '8. Documents Checklist to Bring',
-                    body: lawyerPrepResult.documents_to_bring.map((d: any) => `[  ] ${d}`).join('\n'),
-                  },
-                ]
-              : []),
-          ],
-        };
-      }
-      return {
-        title: 'LexiClarity — Legal Briefing Pack',
-        subtitle: `File: ${fileName || 'Active Document'}`,
-        filename: `lexiclarity_${baseFileName}_brief.pdf`,
-        sections: [{ heading: 'Document Text', body: docText || 'No document loaded.' }],
-      };
-    }
-
-    case 'negotiate': {
-      if (negotiateResult) {
-        return {
-          title: 'LexiClarity — Negotiation Counter-Clause Brief',
-          subtitle: `Draft starting point for commercial rebalancing`,
-          filename: `lexiclarity_${baseFileName}_counter_clause.pdf`,
-          metadata: {
-            'Objective': negotiateResult.negotiation_goal || 'Commercial Rebalancing',
-          },
-          sections: [
-            {
-              heading: '1. Negotiation Objective',
-              body: negotiateResult.negotiation_goal,
-            },
-            {
-              heading: '2. Commercial Rationale (Why Negotiate)',
-              body: negotiateResult.why_negotiate,
-            },
-            {
-              heading: '3. Proposed Balanced Counter-Clause Wording',
-              body: `"${negotiateResult.proposed_clause}"\n\n(Use this balanced wording as your starting position with the counterparty or discuss with counsel.)`,
-              badge: 'Counter-Clause Wording',
-            },
-            ...(negotiateResult.tradeoff
-              ? [
-                  {
-                    heading: '4. Key Tradeoff or Question for Lawyer',
-                    body: negotiateResult.tradeoff,
-                  },
-                ]
-              : []),
-            ...(negotiateResult.source_span
-              ? [
-                  {
-                    heading: '5. Original Source Clause',
-                    body: `"${negotiateResult.source_span}"`,
-                    note: negotiateResult.source_span,
-                  },
-                ]
-              : []),
-          ],
-        };
-      }
-      return {
-        title: 'LexiClarity — Negotiation Workspace',
-        subtitle: `File: ${fileName || 'Active Document'}`,
-        filename: `lexiclarity_${baseFileName}_negotiate.pdf`,
-        sections: [{ heading: 'Document Clause', body: docText.slice(0, 1500) || 'No clause loaded.' }],
       };
     }
 
@@ -586,20 +394,31 @@ export function exportAsPdf({
       y += 4.8;
     }
 
-    // Optional Note / Citation quote
+    // Optional Note / Citation quote with yellow highlight box
     if (sec.note) {
       checkPageBreak(12);
-      y += 1.5;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8.5);
-      doc.setTextColor(100, 100, 100);
+      y += 2;
 
-      const quoteLines = doc.splitTextToSize(`Source Quote: "${sec.note}"`, contentWidth - 4);
+      const quoteText = `Source Citation: "${sec.note}"`;
+      const quoteLines = doc.splitTextToSize(quoteText, contentWidth - 8);
+      const boxHeight = quoteLines.length * 4.5 + 4;
+
+      // Draw yellow highlight box
+      doc.setFillColor(254, 240, 138); // Yellow highlighter
+      doc.setDrawColor(245, 158, 11); // Amber border
+      doc.roundedRect(margin, y, contentWidth, boxHeight, 1, 1, 'FD');
+
+      doc.setFont('helvetica', 'bolditalic');
+      doc.setFontSize(8.5);
+      doc.setTextColor(120, 53, 15); // Dark amber text
+
+      let lineY = y + 4.5;
       for (const qLine of quoteLines) {
         checkPageBreak(4.5);
-        doc.text(qLine, margin + 2, y);
-        y += 4.2;
+        doc.text(qLine, margin + 3, lineY);
+        lineY += 4.5;
       }
+      y += boxHeight + 2;
     }
 
     y += 4; // Space between sections
