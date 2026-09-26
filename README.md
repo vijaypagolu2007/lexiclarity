@@ -19,7 +19,7 @@
 | 📚 Reference Pattern Signals | — | Matches clauses against a transparent bundled demo library without unsupported percentile claims |
 | ⚙️ Pipeline + Performance | — | Shows analysis progress and tracks latency, token usage, and session-local cache hits |
 | 🔀 Compare | FR-3 | Two contract versions → clause-by-clause diff with materiality labels, "what changed for you" impact lines, and impact filters (financial / deadline / obligation / right removed / new penalty) |
-| 💬 Ask Questions | FR-7 | Free-form Q&A grounded in your uploaded document (retrieval + Gemini) |
+| 💬 Ask Questions | FR-7 | Free-form Q&A grounded in up to five relevance-ranked, overlapping document passages (retrieval + Gemini) |
 | 📎 Source Grounding | FR-4 | Every output carries a verbatim citation; a post-generation faithfulness check flags any span not found in the source |
 | 🏷️ Evidence Transparency | — | Outputs labelled Directly stated / Strongly inferred / Needs verification, with confidence levels |
 | ⚡ Sample workflow | — | Judges can load the bundled sample agreement and test every workflow |
@@ -56,6 +56,7 @@ Run the TypeScript API and rendered accessibility regression checks with `npm ru
 ```
 Browser (React/Vite)
   └─ api/index.ts      Shared Vercel/local API handler and Gemini orchestration
+  └─ api/retrieval.ts  Bounded chunking and BM25-style passage ranking for document Q&A
   └─ server.ts         Local Vite/static host delegating /api/* to api/index.ts
   └─ src/utils/extract.ts  PDF · DOCX · TXT upload extraction
   └─ src/components/  Simplify · Explorer · Compare · Document Chat
@@ -72,7 +73,7 @@ All prompts are versioned under [`prompts/`](prompts/):
 - `system.md` — role, grounding, refusal, and output contracts
 - `guardrail.md` — reference classifier prompt; the deployed guardrail route currently uses a lightweight keyword heuristic
 - `simplify.md` / `map.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
-- The deployed API checks response fields and verifies citation spans against source text before returning results; unsupported chat citations are removed and marked for verification.
+- The deployed API checks response fields and verifies citation spans against source text before returning results; unsupported chat citations are removed and marked for verification. Chat retrieval splits long paragraphs into overlapping passages capped at 1,800 characters, ranks passages by query relevance, and sends at most five (9,000 characters total). It sends no passage context when none matches the query.
 
 ## Deployment
 

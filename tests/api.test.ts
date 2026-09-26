@@ -110,6 +110,44 @@ test('Gemini receives retrieved chat context and versioned prompts', async () =>
   assert.equal('document_text' in input, false);
 });
 
+test('chat retrieval bounds large paragraphs and excludes irrelevant chunks', async () => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  let receivedChunks: Array<{ text: string; char_start: number; char_end: number }> = [];
+  const target = 'The municipal filing surcharge is exactly $75, payable once when the agreement is recorded.';
+  globalThis.fetch = async (_input, init) => {
+    const requestBody = JSON.parse(String(init?.body)) as { contents: Array<{ parts: Array<{ text: string }> }> };
+    const modelInput = JSON.parse(requestBody.contents[0].parts[0].text) as { context_chunks: Array<{ text: string; char_start: number; char_end: number }> };
+    receivedChunks = modelInput.context_chunks;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ answer: 'The surcharge is $75.', citations: [target], advice_declined: false }) }] } }] }), { status: 200 });
+  };
+
+  const genericParagraph = `General tenant information and building maintenance rules apply throughout the rental agreement. ${'The tenant should keep shared spaces clean and report routine maintenance promptly. '.repeat(12)}`;
+  const document = [...Array.from({ length: 90 }, () => genericParagraph), `${target} ${'Additional recording details apply to this administrative clause. '.repeat(12)}`].join('\n');
+  const result = await invoke(request('POST', '/api/chat', { question: 'What is the municipal filing surcharge?', document_text: document }));
+
+  assert.equal(result.statusCode, 200);
+  const chunks = receivedChunks;
+  assert.ok(chunks.length > 0 && chunks.length <= 5);
+  assert.ok(chunks.every((chunk) => chunk.text.length <= 1_800));
+  assert.ok(chunks.reduce((total, chunk) => total + chunk.text.length, 0) <= 9_000);
+  assert.ok(chunks.some((chunk) => chunk.text.includes(target)));
+  assert.ok(chunks.every((chunk) => document.slice(chunk.char_start, chunk.char_end) === chunk.text));
+});
+
+test('chat retrieval sends no context when the document has no query match', async () => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  let receivedChunks: Array<{ text: string }> = [];
+  globalThis.fetch = async (_input, init) => {
+    const requestBody = JSON.parse(String(init?.body)) as { contents: Array<{ parts: Array<{ text: string }> }> };
+    receivedChunks = (JSON.parse(requestBody.contents[0].parts[0].text) as { context_chunks: Array<{ text: string }> }).context_chunks;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ answer: 'The provided document does not contain that information.', citations: [], advice_declined: false }) }] } }] }), { status: 200 });
+  };
+
+  const result = await invoke(request('POST', '/api/chat', { question: 'What is the moonstone arbitration protocol?', document_text: 'The tenant pays rent on the first day of each month.' }));
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(receivedChunks, []);
+});
+
 test('simplify, map, and compare return schema-checked results with grounded source evidence', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
   const source = 'Section 1. Tenant pays monthly rent of $900 on the first day of each month.';

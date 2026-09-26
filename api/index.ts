@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { retrieveChunks } from './retrieval';
 
 type RequestLike = {
   method?: string;
@@ -199,32 +200,6 @@ function loadPrompt(file: string): string {
   const prompt = fs.readFileSync(path.join(process.cwd(), 'prompts', file), 'utf8');
   if (!prompt.trim()) throw new Error(`Prompt file ${file} is empty.`);
   return prompt;
-}
-
-type RetrievedChunk = { chunk_id: string; text: string; char_start: number; char_end: number };
-
-function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[a-z0-9]{3,}/g) || [];
-}
-
-function retrieveChunks(query: string, document: string, limit = 5): RetrievedChunk[] {
-  let cursor = 0;
-  const rawChunks = document.split(/\n\s*\n+/).map((text, index) => {
-    const start = document.indexOf(text, cursor);
-    cursor = Math.max(start, cursor) + text.length;
-    const trimmed = text.trim();
-    const trimOffset = text.indexOf(trimmed);
-    return { chunk_id: `chunk-${index + 1}`, text: trimmed, char_start: start + trimOffset, char_end: start + trimOffset + trimmed.length };
-  }).filter((chunk) => chunk.text.length >= 30);
-  if (rawChunks.length <= limit) return rawChunks;
-  const terms = new Set(tokenize(query));
-  const ranked = rawChunks.map((chunk, index) => {
-    const chunkTerms = new Set(tokenize(chunk.text));
-    return { chunk, index, score: [...terms].reduce((sum, term) => sum + Number(chunkTerms.has(term)), 0) };
-  });
-  ranked.sort((a, b) => b.score - a.score || a.index - b.index);
-  const best = ranked.slice(0, limit).sort((a, b) => a.index - b.index).map(({ chunk }) => chunk);
-  return best;
 }
 
 async function askGemini<T>(prompt: string, input: JsonObject): Promise<T> {
