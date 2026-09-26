@@ -37,5 +37,8 @@ export async function extractUploadedText(file: File): Promise<string> {
   if (!normalized) {
     throw new Error('This file contains no readable text. Scanned PDFs require OCR before upload.');
   }
-  return normalized.slice(0, MAX_TEXT_CHARS);
+  if (normalized.length > MAX_TEXT_CHARS) {
+    throw new Error(`This document has more than ${MAX_TEXT_CHARS.toLocaleString()} characters and cannot be analyzed completely. Split it into smaller files so no clauses are silently skipped.`);
+  }
+  return normalized;
 }

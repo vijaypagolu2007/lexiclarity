@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import handler, { resetRateLimitsForTests } from '../api/index.ts';
+import { extractUploadedText } from '../src/utils/extract.ts';
 
 type CapturedResponse = { statusCode: number; body: unknown };
 
@@ -47,6 +48,15 @@ test('malformed and oversized JSON requests return 400 and 413', async () => {
 test('required fields and document character limits are enforced', async () => {
   assert.equal((await invoke(request('POST', '/api/chat', { question: 'Rent?' }))).statusCode, 400);
   assert.equal((await invoke(request('POST', '/api/map', { document_text: 'x'.repeat(120_001) }))).statusCode, 413);
+});
+
+test('oversized uploads fail clearly instead of silently dropping later clauses', async () => {
+  const upload = {
+    name: 'large-contract.txt',
+    size: 120_001,
+    text: async () => 'x'.repeat(120_001),
+  } as File;
+  await assert.rejects(() => extractUploadedText(upload), /cannot be analyzed completely/);
 });
 
 test('public model endpoints apply a per-client request limit', async () => {
