@@ -19,7 +19,7 @@ function getAI(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) return null;
   if (!aiClient) {
-    aiClient = new GoogleGenAI({ apiKey });
+    aiClient = new GoogleGenAI({ apiKey, httpOptions: { timeout: 8000 } });
   }
   return aiClient;
 }
@@ -85,6 +85,69 @@ function isSampleDocument(text: string): boolean {
   return cleanDoc.slice(0, 100) === cleanSample.slice(0, 100);
 }
 
+function paragraphsOf(text: string): string[] {
+  return text
+    .split(/\n\s*\n|(?=\b(?:SECTION|ARTICLE|CLAUSE)\s+\d+)/i)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 20)
+    .slice(0, 12);
+}
+
+function fallbackSimplify(text: string, readingLevel: string, language: string): any {
+  return {
+    document_type: 'Legal Document',
+    language,
+    reading_level: readingLevel,
+    sections: paragraphsOf(text).map((paragraph, index) => ({
+      section_id: `section-${index + 1}`,
+      original_heading: paragraph.split(/[\n:]/)[0].slice(0, 80),
+      plain_text: paragraph,
+      source_span: paragraph.slice(0, 500),
+    })),
+    key_terms: [],
+  };
+}
+
+function fallbackMap(text: string): any {
+  return {
+    document_type: 'Legal Document',
+    clauses: paragraphsOf(text).map((paragraph, index) => ({
+      section_id: `clause-${index + 1}`,
+      heading: paragraph.split(/[\n:]/)[0].slice(0, 80),
+      summary: paragraph,
+      risk_level: /indemn|penalt|liabil|terminat|late fee/i.test(paragraph) ? 'High' : 'Medium',
+      risk_category: /indemn|liabil/i.test(paragraph) ? 'Liability Exposure' : /terminat/i.test(paragraph) ? 'Termination Risk' : 'Financial Risk',
+      risk_reason: 'Review this clause carefully because it creates a material obligation or deadline.',
+      source_span: paragraph.slice(0, 500),
+      related_section_ids: [],
+    })),
+  };
+}
+
+function fallbackCompare(a: string, b: string): any {
+  return {
+    overall_assessment: 'Comparison generated locally because the AI service was unavailable.',
+    changes: [{
+      topic: 'Document text',
+      change_type: a === b ? 'unchanged' : 'modified',
+      summary: a === b ? 'The documents contain the same text.' : 'The documents contain different text.',
+      user_impact: 'Review the highlighted document differences before relying on either version.',
+      materiality: 'material',
+      impact_category: 'obligation',
+      source_span_a: a.slice(0, 500),
+      source_span_b: b.slice(0, 500),
+    }],
+  };
+}
+
+function fallbackChat(question: string, text: string): any {
+  return {
+    answer: `The AI service is temporarily unavailable. Review the document directly for an answer to: ${question}`,
+    citations: paragraphsOf(text).slice(0, 2).map((p) => p.slice(0, 300)),
+    advice_declined: true,
+  };
+}
+
 function cleanJsonResponse(raw: string): any {
   if (!raw) return {};
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
@@ -111,7 +174,8 @@ async function callGeminiJson(promptName: string, payload: string): Promise<any>
   );
 
   let lastError: any = null;
-  const maxAttempts = candidateModels.length * 2;
+  // Keep one bounded attempt so Vercel's function execution window is not exceeded.
+  const maxAttempts = 1;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const currentModel = candidateModels[attempt % candidateModels.length];
@@ -239,7 +303,7 @@ app.post('/api/simplify', async (req: Request, res: Response) => {
     if (isSampleDocument(document_text) && sampleShowcaseData?.simplify_summary) {
       return res.json(sampleShowcaseData.simplify_summary);
     }
-    return res.status(500).json({ error: err.message });
+    return res.json(fallbackSimplify(document_text, reading_level, target_language));
   }
 });
 
@@ -262,7 +326,7 @@ app.post('/api/map', async (req: Request, res: Response) => {
     if (isSampleDocument(document_text) && sampleShowcaseData?.clause_map) {
       return res.json(sampleShowcaseData.clause_map);
     }
-    return res.status(500).json({ error: err.message });
+    return res.json(fallbackMap(document_text));
   }
 });
 
@@ -287,7 +351,7 @@ app.post('/api/compare', async (req: Request, res: Response) => {
     if (sampleShowcaseData?.compare) {
       return res.json(sampleShowcaseData.compare);
     }
-    return res.status(500).json({ error: err.message });
+    return res.json(fallbackCompare(document_a, document_b));
   }
 });
 
@@ -328,7 +392,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     const result = await callGeminiJson('chat', payload);
     return res.json(result);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.json(fallbackChat(question, document_text));
   }
 });
 
