@@ -263,10 +263,12 @@ test('Gemini 429 retries only brief transient limits and explains exhausted dail
 
 test('Gemini outages and malformed model schemas return safe error responses', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
-  globalThis.fetch = async () => new Response('unavailable', { status: 503 });
+  let outageAttempts = 0;
+  globalThis.fetch = async () => { outageAttempts += 1; return new Response('unavailable', { status: 503 }); };
   const unavailable = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
   assert.equal(unavailable.statusCode, 502);
   assert.deepEqual(unavailable.body, { error: 'Gemini service returned HTTP 503. Please check the project status and retry.' });
+  assert.equal(outageAttempts, 3);
 
   globalThis.fetch = async () => new Response('unauthorized', { status: 401 });
   const invalidKey = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));

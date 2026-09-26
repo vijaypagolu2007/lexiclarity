@@ -223,6 +223,10 @@ async function askGemini<T>(prompt: string, input: JsonObject): Promise<T> {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: requestBody,
       });
+      if (response.status === 503 && attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+        continue;
+      }
       if (response.status !== 429) break;
       const rateLimit = await readGeminiRateLimit(response);
       if (attempt === 0 && !rateLimit.dailyQuota && rateLimit.retryAfterMs !== null && rateLimit.retryAfterMs <= 2_000) {
