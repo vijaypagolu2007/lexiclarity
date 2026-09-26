@@ -187,6 +187,32 @@ test('unsupported Gemini citations are removed and the answer is marked for veri
   assert.match((result.body as any).answer, /^Needs verification:/);
 });
 
+test('Gemini 429 retries only brief transient limits and explains exhausted daily quota', async () => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  let attempts = 0;
+  globalThis.fetch = async () => {
+    attempts += 1;
+    if (attempts === 1) {
+      return new Response(JSON.stringify({ error: { status: 'RESOURCE_EXHAUSTED', message: 'Rate limited', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '0.01s' }] } }), { status: 429 });
+    }
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ answer: 'The rent is $900.', citations: ['The rent is $900 per month.'], advice_declined: false }) }] } }] }), { status: 200 });
+  };
+  const transient = await invoke(request('POST', '/api/chat', { question: 'What is the rent?', document_text: 'The rent is $900 per month.' }, '192.0.2.31'));
+  assert.equal(transient.statusCode, 200);
+  assert.equal(attempts, 2);
+
+  attempts = 0;
+  globalThis.fetch = async () => {
+    attempts += 1;
+    return new Response(JSON.stringify({ error: { status: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] }] } }), { status: 429 });
+  };
+  const exhausted = await invoke(request('POST', '/api/chat', { question: 'What is the rent?', document_text: 'The rent is $900 per month.' }, '192.0.2.32'));
+  assert.equal(exhausted.statusCode, 503);
+  assert.match((exhausted.body as { error: string }).error, /daily quota/i);
+  assert.match((exhausted.body as { error: string }).error, /same project share quota/i);
+  assert.equal(attempts, 1);
+});
+
 test('Gemini outages and malformed model schemas return safe error responses', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
   globalThis.fetch = async () => new Response('unavailable', { status: 503 });
