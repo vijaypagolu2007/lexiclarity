@@ -29,7 +29,7 @@ from core.jev import (
 
 
 def _make_mock_response(
-    choice_val: str = "clarify",
+    choice_val: str = "explain",
     choice_conf: float = 0.95,
     noul_val: float = 0.80,
     score_val: float = 4.0,
@@ -44,7 +44,7 @@ def _make_mock_response(
                 type="choice",
                 choice=choice_val,
                 confidence=choice_conf,
-                probabilities={"clarify": 0.85, "explain": 0.15},
+                probabilities={"explain": 0.85, "compare": 0.15},
             ),
             "ambiguity": NoulAnswer(
                 type="noul",
@@ -93,7 +93,7 @@ class TestJevClientEvaluation:
         mock_sdk_class.return_value = mock_instance
 
         mock_resp = _make_mock_response(
-            choice_val="clarify",
+            choice_val="explain",
             choice_conf=0.92,
             noul_val=0.83,
             score_val=4.0,  # on 1-5 scale -> (4-1)/4*100 = 75.0
@@ -110,9 +110,9 @@ class TestJevClientEvaluation:
         assert result.success is True
 
         # Verify Choice: intent
-        assert result.intent.choice == "clarify"
+        assert result.intent.choice == "explain"
         assert result.intent.confidence == 0.92
-        assert "clarify" in result.intent.probabilities
+        assert "explain" in result.intent.probabilities
 
         # Verify Noul: ambiguity
         assert result.ambiguity.probability == 0.83

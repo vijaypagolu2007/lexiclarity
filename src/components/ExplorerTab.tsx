@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ClauseItem, ClauseMapResult, HealthScore } from '../types';
 import { checkItems } from '../utils/grounding';
 import { CATEGORIES, scoreClauses } from '../utils/scoring';
@@ -7,9 +7,11 @@ import { ExportDropdown } from './ExportDropdown';
 import { Compass, ShieldAlert, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
+import { requireLegalDocument } from '../utils/guardrail';
 
 interface ExplorerTabProps {
   docText: string;
+  sourceUrl?: string;
   onOpenDocPrompt: () => void;
   data?: { clauses: ClauseItem[]; health: HealthScore } | null;
   onResultChange?: (data: { clauses: ClauseItem[]; health: HealthScore } | null) => void;
@@ -17,6 +19,7 @@ interface ExplorerTabProps {
 
 export const ExplorerTab: React.FC<ExplorerTabProps> = ({
   docText,
+  sourceUrl,
   onOpenDocPrompt,
   data: externalData,
   onResultChange,
@@ -25,8 +28,17 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
   const [internalClauses, setInternalClauses] = useState<ClauseItem[] | null>(null);
   const [internalHealth, setInternalHealth] = useState<HealthScore | null>(null);
 
-  const clauses = externalData !== undefined ? externalData?.clauses || null : internalClauses;
-  const health = externalData !== undefined ? externalData?.health || null : internalHealth;
+  const clauses = externalData?.clauses || internalClauses;
+  const health = externalData?.health || internalHealth;
+
+  useEffect(() => {
+    if (externalData === null) {
+      setInternalClauses(null);
+      setInternalHealth(null);
+      setExpandedSources({});
+      setPreviewCitation(null);
+    }
+  }, [externalData]);
 
   const setClausesAndHealth = (newClauses: ClauseItem[] | null, newHealth: HealthScore | null) => {
     setInternalClauses(newClauses);
@@ -51,6 +63,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     setError(null);
 
     try {
+      await requireLegalDocument(docText);
       const res = await fetch('/api/map', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,6 +477,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
             <DocumentPdfPreview
               docText={docText}
               docTitle="Contract Clause Source Citation"
+              sourceUrl={sourceUrl}
               highlightText={previewCitation}
               onClose={() => setPreviewCitation(null)}
               isModal={true}

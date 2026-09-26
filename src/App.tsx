@@ -9,6 +9,7 @@ import { ChatTab } from './components/ChatTab';
 import { BookOpen, Compass, GitCompare, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { downloadActiveContent } from './utils/export';
+import { extractUploadedText } from './utils/extract';
 import {
   SimplifyResult,
   ClauseItem,
@@ -50,6 +51,7 @@ export function App() {
   const [explorerData, setExplorerData] = useState<{ clauses: ClauseItem[]; health: HealthScore } | null>(null);
   const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/health')
@@ -80,33 +82,42 @@ export function App() {
             clauseCount: (data.revised || data.original).split('\n\n').filter((c: string) => c.trim().length > 30).length,
           };
 
-          setDocsLibrary([doc1, doc2]);
-          setActiveDocId(doc1.id);
-          setCompareDocAId(doc1.id);
-          setCompareDocBId(doc2.id);
+          setDocsLibrary((prev) => {
+            const userDocs = prev.filter((doc) => !doc.id.startsWith('sample_'));
+            return [doc1, doc2, ...userDocs];
+          });
+          setActiveDocId((current) => current || doc1.id);
+          setCompareDocAId((current) => current || doc1.id);
+          setCompareDocBId((current) => current || doc2.id);
         }
       })
       .catch((err) => console.warn('Failed to load sample text:', err));
   }, []);
 
   // Multi-upload handler populating central docsLibrary
-  const handleUploadDocs = async (files: FileList) => {
+  const handleUploadDocs = async (files: File[]) => {
     const newDocs: LoadedDocument[] = [];
+    setUploadError(null);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const text = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve((e.target?.result as string) || '');
-        reader.readAsText(file);
-      });
+      let text = '';
+      try {
+        text = await extractUploadedText(file);
+      } catch (error) {
+        setUploadError(error instanceof Error ? `${file.name}: ${error.message}` : `${file.name}: Unable to read file.`);
+        continue;
+      }
 
       if (text) {
         newDocs.push({
-          id: `doc_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
+          id: `doc_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
           name: file.name,
           text,
           wordCount: text.trim().split(/\s+/).length,
           clauseCount: text.split('\n\n').filter((c) => c.trim().length > 30).length,
+          uploadedAt: Date.now(),
+          sourceUrl: file.type === 'application/pdf' ? URL.createObjectURL(file) : undefined,
+          mimeType: file.type || undefined,
         });
       }
     }
@@ -129,18 +140,58 @@ export function App() {
 
   const handleRemoveDoc = (id: string) => {
     setDocsLibrary((prev) => {
+      const removed = prev.find((d) => d.id === id);
+      if (removed?.sourceUrl) URL.revokeObjectURL(removed.sourceUrl);
       const filtered = prev.filter((d) => d.id !== id);
-      if (activeDocId === id && filtered.length > 0) {
-        setActiveDocId(filtered[0].id);
-      }
+      setActiveDocId(activeDocId === id ? filtered[0]?.id || '' : activeDocId);
       return filtered;
     });
   };
 
+  const handleClearDocs = () => {
+    docsLibrary.forEach((doc) => doc.sourceUrl && URL.revokeObjectURL(doc.sourceUrl));
+    setDocsLibrary([]);
+    setActiveDocId('');
+    setCompareDocAId('');
+    setCompareDocBId('');
+    setSimplifyResult(null);
+    setExplorerData(null);
+    setCompareResult(null);
+    setChatMessages([]);
+    setIsShowcase(false);
+  };
+
+  const buildSampleDocs = (): LoadedDocument[] => {
+    if (!sampleOriginal) return [];
+    return [
+      {
+        id: 'sample_original',
+        name: 'sample_rental_agreement.txt',
+        text: sampleOriginal,
+        wordCount: sampleOriginal.trim().split(/\s+/).length,
+        clauseCount: sampleOriginal.split('\n\n').filter((c) => c.trim().length > 30).length,
+      },
+      {
+        id: 'sample_revised',
+        name: 'sample_rental_agreement_revised.txt',
+        text: sampleRevised || sampleOriginal,
+        wordCount: (sampleRevised || sampleOriginal).trim().split(/\s+/).length,
+        clauseCount: (sampleRevised || sampleOriginal).split('\n\n').filter((c) => c.trim().length > 30).length,
+      },
+    ];
+  };
+
   const handleLoadSample = () => {
-    const sampleDoc = docsLibrary.find((d) => d.id === 'sample_original');
+    const sampleDocs = buildSampleDocs();
+    const sampleDoc = docsLibrary.find((d) => d.id === 'sample_original') || sampleDocs[0];
     if (sampleDoc) {
+      setDocsLibrary((prev) => {
+        const withoutSamples = prev.filter((d) => !d.id.startsWith('sample_'));
+        return [...sampleDocs, ...withoutSamples];
+      });
       setActiveDocId(sampleDoc.id);
+      setCompareDocAId('sample_original');
+      setCompareDocBId('sample_revised');
       setIsShowcase(true);
       setSimplifyResult(null);
       setExplorerData(null);
@@ -148,6 +199,10 @@ export function App() {
   };
 
   const handleLoadComparePair = () => {
+    const sampleDocs = buildSampleDocs();
+    if (sampleDocs.length) {
+      setDocsLibrary((prev) => [...sampleDocs, ...prev.filter((d) => !d.id.startsWith('sample_'))]);
+    }
     setCompareDocAId('sample_original');
     setCompareDocBId('sample_revised');
     setActiveTab('compare');
@@ -199,7 +254,13 @@ export function App() {
           onLoadSample={handleLoadSample}
           onLoadComparePair={handleLoadComparePair}
           onRemoveDoc={handleRemoveDoc}
+          onClearDocs={handleClearDocs}
         />
+        {uploadError && (
+          <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+            {uploadError}
+          </div>
+        )}
 
         {/* Main Workspace Area */}
         <main className="flex-1 flex flex-col min-w-0">
@@ -238,6 +299,7 @@ export function App() {
                 {activeTab === 'simplify' && (
                   <SimplifyTab
                     docText={activeDocText}
+                    sourceUrl={activeDoc?.sourceUrl}
                     onOpenDocPrompt={handleLoadSample}
                     result={simplifyResult}
                     onResultChange={setSimplifyResult}
@@ -247,6 +309,7 @@ export function App() {
                 {activeTab === 'explorer' && (
                   <ExplorerTab
                     docText={activeDocText}
+                    sourceUrl={activeDoc?.sourceUrl}
                     onOpenDocPrompt={handleLoadSample}
                     data={explorerData}
                     onResultChange={setExplorerData}

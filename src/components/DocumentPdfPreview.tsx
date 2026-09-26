@@ -11,7 +11,6 @@ import {
   ChevronDown,
   Download,
   Eye,
-  CheckCircle2,
 } from 'lucide-react';
 
 interface DocumentPdfPreviewProps {
@@ -20,6 +19,7 @@ interface DocumentPdfPreviewProps {
   highlightText?: string | null;
   onClose?: () => void;
   isModal?: boolean;
+  sourceUrl?: string;
 }
 
 export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
@@ -28,6 +28,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
   highlightText,
   onClose,
   isModal = false,
+  sourceUrl,
 }) => {
   const [zoom, setZoom] = useState<number>(100);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -224,21 +225,26 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
           className="w-full max-w-3xl bg-white text-stone-900 rounded-sm shadow-2xl p-8 sm:p-12 border border-stone-300 min-h-[680px] transition-transform duration-200 relative"
         >
-          {/* Simulated PDF Header / Watermark */}
-          <div className="border-b border-stone-200 pb-4 mb-6 flex items-center justify-between text-stone-400 text-[10px] font-mono uppercase tracking-widest select-none">
-            <span>OFFICIAL LEGAL AGREEMENT • PAGE 1</span>
-            <span className="flex items-center gap-1 text-emerald-700 font-sans font-bold">
-              <CheckCircle2 className="w-3 h-3" /> VERIFIED ORIGINAL
-            </span>
-          </div>
-
-          {/* Document Content */}
-          {renderHighlightedDoc()}
+          {sourceUrl ? (
+            <iframe
+              src={`${sourceUrl}#toolbar=1&navpanes=0&view=FitH`}
+              title={`${docTitle} PDF document`}
+              className="w-full min-h-[680px] rounded border border-stone-300 bg-white"
+            />
+          ) : (
+            <>
+              <div className="border-b border-stone-200 pb-4 mb-6 flex items-center justify-between text-stone-400 text-[10px] font-mono uppercase tracking-widest select-none">
+                <span>DOCUMENT PREVIEW</span>
+                <span className="text-stone-500 font-sans font-semibold">Text extraction view</span>
+              </div>
+              {renderHighlightedDoc()}
+            </>
+          )}
 
           {/* Page Footer */}
           <div className="mt-12 pt-4 border-t border-stone-200 flex justify-between items-center text-[10px] text-stone-400 font-mono">
-            <span>LexiClarity Interactive PDF Preview</span>
-            <span>Confidential & Proprietary</span>
+            <span>LexiClarity document preview</span>
+            <span>Generated locally from the selected document</span>
           </div>
         </div>
       </div>

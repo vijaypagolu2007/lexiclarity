@@ -6,12 +6,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from config import AppConfig
 from core.gemini import GeminiClient
 
 logger = logging.getLogger(__name__)
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 _prompts_cache: dict[str, str] = {}
+DEFAULT_MODEL = AppConfig.MODEL_NAME
 
 
 def load_prompt(name: str) -> str:

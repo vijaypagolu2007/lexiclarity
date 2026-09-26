@@ -14,7 +14,6 @@ from src.grounding import extract_citations, verify_citation
 from src.llm import load_prompt, run_task
 from src.retrieval import retrieve
 from ui.chat import format_debug_decision_panel, handle_chat_query
-from ui.clarify import handle_clarify_clause
 
 
 class TestConfigLoading:
@@ -121,43 +120,18 @@ class TestGeminiClientAndLLMRunner:
 class TestUIOrchestrationLayers:
     def test_debug_panel_formatting(self):
         decision = DecisionResult(
-            intent="clarify",
+            intent="explain",
             ambiguity=0.82,
             risk=75.0,
             confidence=0.91,
-            strategy="CLARIFY",
+            strategy="DIRECT_RAG",
         )
         panel = format_debug_decision_panel(decision)
-        assert panel["Intent"] == "clarify"
+        assert panel["Intent"] == "explain"
         assert panel["Ambiguity"] == "0.82"
         assert panel["Risk"] == "75.0/100"
         assert panel["Confidence"] == "0.91"
-        assert panel["Strategy"] == "CLARIFY"
-
-    @patch("src.llm.run_task")
-    def test_handle_chat_query_clarify_strategy(self, mock_run_task):
-        mock_engine = MagicMock()
-        mock_engine.decide.return_value = DecisionResult(
-            intent="clarify",
-            ambiguity=0.85,
-            risk=70.0,
-            confidence=0.90,
-            strategy="CLARIFY",
-        )
-
-        resp = handle_chat_query(
-            question="What is the indemnity clause?",
-            document_text="The tenant shall indemnify landlord.",
-            decision_engine=mock_engine,
-        )
-
-        assert resp["status"] == "requires_clarification"
-        assert resp["clarification_needed"] is True
-        assert "suggested_actions" in resp
-        assert "debug_panel" in resp
-        assert resp["debug_panel"]["Strategy"] == "CLARIFY"
-        # Since it required clarification, run_task was not called
-        assert not mock_run_task.called
+        assert panel["Strategy"] == "DIRECT_RAG"
 
     @patch("ui.chat.run_task")
     def test_handle_chat_query_direct_rag_strategy(self, mock_run_task):
@@ -185,30 +159,3 @@ class TestUIOrchestrationLayers:
         assert resp["answer"] == "The rent is $2,000 per month."
         assert mock_run_task.called
         assert resp["debug_panel"]["Strategy"] == "DIRECT_RAG"
-
-    @patch("ui.clarify.run_task")
-    def test_handle_clarify_clause(self, mock_run_task):
-        mock_run_task.return_value = {
-            "plain_english": "This clause makes you pay for all damages.",
-            "key_points": ["Unlimited liability"],
-            "potential_pitfalls": ["No financial cap"],
-        }
-        mock_engine = MagicMock()
-        mock_engine.decide.return_value = DecisionResult(
-            intent="clarify",
-            ambiguity=0.70,
-            risk=80.0,
-            confidence=0.92,
-            strategy="CLARIFY",
-        )
-
-        clause = "Tenant indemnifies landlord against all damages."
-        resp = handle_clarify_clause(
-            clause_text=clause,
-            document_text="Full agreement",
-            decision_engine=mock_engine,
-        )
-
-        assert resp["plain_english"] == "This clause makes you pay for all damages."
-        assert len(resp["key_points"]) == 1
-        assert resp["debug_panel"]["Intent"] == "clarify"

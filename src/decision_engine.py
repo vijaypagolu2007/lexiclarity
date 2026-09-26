@@ -17,11 +17,9 @@ from core.jev import JevAdapterError, JevClient, JevEvaluationResult
 logger = logging.getLogger(__name__)
 
 # Canonical routing strategies
-STRATEGY_CLARIFY = "CLARIFY"
 STRATEGY_DIRECT_RAG = "DIRECT_RAG"
 STRATEGY_COMPARE = "COMPARE"
 STRATEGY_SUMMARIZE = "SUMMARIZE"
-STRATEGY_NEGOTIATE = "NEGOTIATE"
 STRATEGY_FALLBACK = "FALLBACK"
 
 
@@ -195,33 +193,14 @@ class DecisionEngine:
         """Deterministic policy translating Jev signals into application actions.
 
         Rules:
-        1. Ambiguity above threshold -> CLARIFY
-        2. Risk above threshold -> CLARIFY
-        3. Low confidence with elevated risk/ambiguity -> CLARIFY
-        4. Intent specific mappings (compare, summarize, negotiate, clarify)
-        5. Default -> DIRECT_RAG
+        1. High ambiguity or risk remains visible in metadata.
+        2. Intent-specific mappings cover compare and summarize.
+        3. Default -> DIRECT_RAG with the persistent disclaimer.
         """
-        if ambiguity >= self.config.ambiguity_threshold:
-            return STRATEGY_CLARIFY
-
-        if risk >= self.config.risk_threshold:
-            return STRATEGY_CLARIFY
-
-        if confidence < self.config.confidence_threshold and (
-            risk >= (self.config.risk_threshold * 0.6)
-            or ambiguity >= (self.config.ambiguity_threshold * 0.6)
-        ):
-            # Low confidence guard: clarify if either risk or ambiguity is moderate
-            return STRATEGY_CLARIFY
-
-        if intent == "clarify":
-            return STRATEGY_CLARIFY
         if intent == "compare":
             return STRATEGY_COMPARE
         if intent == "summarize":
             return STRATEGY_SUMMARIZE
-        if intent == "negotiate":
-            return STRATEGY_NEGOTIATE
 
         return STRATEGY_DIRECT_RAG
 
@@ -233,7 +212,6 @@ class DecisionEngine:
     ) -> DecisionResult:
         """Deterministic heuristic fallback when Jev is unavailable or disabled."""
         q_lower = (user_query or "").lower()
-        has_clause = bool(clause_text and clause_text.strip())
 
         if "compare" in q_lower or "difference" in q_lower or "versus" in q_lower:
             intent = "compare"
@@ -241,17 +219,6 @@ class DecisionEngine:
         elif "summar" in q_lower or "overview" in q_lower or "tldr" in q_lower:
             intent = "summarize"
             strategy = STRATEGY_SUMMARIZE
-        elif "negotiat" in q_lower or "counter" in q_lower or "revise" in q_lower:
-            intent = "negotiate"
-            strategy = STRATEGY_NEGOTIATE
-        elif (
-            has_clause
-            or "clarif" in q_lower
-            or "what does" in q_lower
-            or "mean" in q_lower
-        ):
-            intent = "clarify"
-            strategy = STRATEGY_CLARIFY if has_clause else STRATEGY_DIRECT_RAG
         else:
             intent = "explain"
             strategy = STRATEGY_DIRECT_RAG

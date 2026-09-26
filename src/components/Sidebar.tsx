@@ -6,10 +6,11 @@ interface SidebarProps {
   docsLibrary: LoadedDocument[];
   activeDocId: string;
   onSelectActiveDoc: (id: string) => void;
-  onUploadDocs: (files: FileList) => void;
+  onUploadDocs: (files: File[]) => void;
   onLoadSample: () => void;
   onLoadComparePair: () => void;
   onRemoveDoc: (id: string) => void;
+  onClearDocs: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,12 +21,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLoadSample,
   onLoadComparePair,
   onRemoveDoc,
+  onClearDocs,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onUploadDocs(e.target.files);
+      onUploadDocs(Array.from(e.target.files));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -68,7 +70,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <FolderOpen className="w-3.5 h-3.5 text-amber-700" />
             Document Library ({docsLibrary.length})
           </label>
-          <span className="text-[10px] text-stone-400 font-mono">Select 1 for analysis</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-stone-400 font-mono">Select 1 for analysis</span>
+            {docsLibrary.length > 0 && (
+              <button
+                type="button"
+                onClick={onClearDocs}
+                className="text-[10px] font-semibold text-red-700 hover:text-red-900 underline underline-offset-2"
+                aria-label="Remove all documents from library"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
 
         {docsLibrary.length === 0 ? (

@@ -15,13 +15,13 @@
 
 ## 1. Executive Summary
 
-Build and deploy a **live GenAI web application** that makes legal documents accessible to non-lawyers. The app takes complex legal text (contracts, agreements, notices) and delivers three core capabilities: **(1) simplification** of dense legal language, **(2) side-by-side contract comparison**, and **(3) clause-by-clause clarification** with plain-language explanations — all with source-grounded citations so users can trust what they read.
+Build and deploy a **live GenAI web application** that makes legal documents accessible to non-lawyers. The app takes complex legal text (contracts, agreements, notices) and delivers three core capabilities: **(1) simplification** of dense legal language, **(2) side-by-side contract comparison**, and **(3) grounded risk exploration and document chat** — all with source-grounded citations so users can trust what they read.
 
 The submission will be evaluated by PromptWars' upgraded AI Evaluator, so the product must demonstrate strong prompt engineering, reliable grounded outputs, and a polished live user experience.
 
 ## 2. Background & Problem Statement
 
-> **Official PS:** *AI for Legal Assistance & Access — Engineer GenAI solutions to simplify complex legal docs, compare contracts, or clarify clauses.*
+> **Official PS:** *AI for Legal Assistance & Access — Engineer GenAI solutions to simplify complex legal docs, compare contracts, and help users identify important risks.*
 
 **The problem:** Legal documents are written in jargon-heavy language. Ordinary citizens, small-business owners, tenants, and freelancers sign contracts they cannot fully understand. Access to a lawyer is expensive and slow, which creates an access-to-justice gap.
 
@@ -60,19 +60,18 @@ The submission will be evaluated by PromptWars' upgraded AI Evaluator, so the pr
 |---|---|---|
 | FR-1 | Document Upload | Accept PDF, DOCX, and plain text; extract text client/server-side |
 | FR-2 | Simplify Mode | Rewrite full document (or selected section) in plain language; support 3 reading levels (Simple / Simpler / Summary) |
-| FR-3 | Clause Clarifier | Select any clause → get plain-language explanation + plain-English risk flag (Low / Medium / High) |
-| FR-4 | Contract Compare | Upload two documents → clause-by-clause diff, highlight additions/deletions/modified obligations |
-| FR-5 | Source Grounding | Every explanation links back to the exact source sentence(s); no answer without citation |
-| FR-6 | Disclaimer | Persistent "informational only, not legal advice" notice |
-| FR-7 | Guardrails | Refuse non-legal-document inputs gracefully; handle scanned/empty files with clear errors |
+| FR-3 | Contract Compare | Upload two documents → clause-by-clause diff, highlight additions/deletions/modified obligations |
+| FR-4 | Source Grounding | Every explanation links back to the exact source sentence(s); no answer without citation |
+| FR-5 | Disclaimer | Persistent "informational only, not legal advice" notice |
+| FR-6 | Guardrails | Refuse non-legal-document inputs gracefully; handle scanned/empty files with clear errors |
 
 #### Should Have (if time permits)
 | ID | Requirement | Description |
 |---|---|---|
-| FR-8 | Follow-up Chat | Ask free-form questions about the uploaded document (RAG over the doc) |
-| FR-9 | Multilingual Output | Simplified output in major Indian languages (Hindi, Telugu, Tamil…) |
-| FR-10 | Risk Summary Dashboard | Auto-flag risky clauses (indemnity, auto-renewal, unlimited liability, non-compete) |
-| FR-11 | Export | Download simplified text as PDF/Markdown |
+| FR-7 | Follow-up Chat | Ask free-form questions about the uploaded document (RAG over the doc) |
+| FR-8 | Multilingual Output | Simplified output in major Indian languages (Hindi, Telugu, Tamil…) |
+| FR-9 | Risk Summary Dashboard | Auto-flag risky clauses (indemnity, auto-renewal, unlimited liability, non-compete) |
+| FR-10 | Export | Download simplified text as PDF/Markdown |
 
 #### Could Have (stretch)
 | ID | Requirement |
@@ -82,7 +81,7 @@ The submission will be evaluated by PromptWars' upgraded AI Evaluator, so the pr
 
 ### 5.2 User Flow (Primary)
 1. Land on app → upload a contract (drag & drop)
-2. Choose mode: **Simplify** / **Clarify Clause** / **Compare**
+2. Choose mode: **Simplify** / **Clause Explorer** / **Compare** / **Document Chat**
 3. View output with citations → click citation to jump to source text
 4. Ask follow-up questions (FR-8)
 5. Export or share summary
@@ -115,7 +114,8 @@ User Browser
    ▼
 [Model]  Gemini API (Google for Developers collaboration)
    │  ├─ Simplification prompt  (JSON schema output)
-   │  ├─ Clause clarification prompt
+   │  ├─ Clause map and risk prompt
+   │  ├─ Grounded chat prompt
    │  └─ Comparison prompt (structured diff)
    ▼
 [Post-processing] Citation mapper → faithfulness check → UI
@@ -139,7 +139,7 @@ Since this is a **calibration track for the upgraded AI Evaluator**, prompt qual
 |---|---|
 | Grounded-answer rate | ≥ 95% of outputs pass citation check |
 | Simplification quality | Layperson comprehension score ≥ 4/5 in user testing |
-| Clause-clarification accuracy | ≥ 90% agreement on sample contract set |
+| Risk-map accuracy | ≥ 90% agreement on sample contract set |
 | Compare diff recall | ≥ 90% of material changes detected |
 | Uptime | Live URL available throughout 27 Sep–4 Oct review window |
 
@@ -149,7 +149,7 @@ Since this is a **calibration track for the upgraded AI Evaluator**, prompt qual
 |---|---|---|
 | **9 Sep (Day 0)** | Kickoff — finalize this PRD, register, scaffold repo | Repo skeleton + README |
 | 10–11 Sep | Research + finalize feature scope; build text extraction | FR-1 working locally |
-| 12–13 Sep | Simplify + Clause Clarifier core (FR-2, FR-3) | Working prompts with citations |
+| 12–13 Sep | Simplify + Clause Explorer core (FR-2, FR-9) | Working prompts with citations |
 | 14 Sep | Contract Compare (FR-4) | Diff output locally |
 | **15 Sep** | **PS Explainer session — attend live**, incorporate feedback | Updated scope if needed |
 | 16–18 Sep | RAG follow-up chat (FR-8), guardrails, disclaimers | Feature-complete local app |

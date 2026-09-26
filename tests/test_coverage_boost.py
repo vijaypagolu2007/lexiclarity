@@ -11,7 +11,6 @@ from core.gemini import GeminiClient
 from core.jev import JevAdapterError, JevClient
 from core.retrieval import chunk_document, retrieve_chunks
 from src.decision_engine import (
-    STRATEGY_NEGOTIATE,
     STRATEGY_SUMMARIZE,
     DecisionEngine,
     get_decision_engine,
@@ -130,8 +129,5 @@ def test_decision_engine_singleton():
 
 def test_decision_engine_custom_fallback_routes():
     engine = DecisionEngine()
-    res_neg = engine._build_fallback_result("Please help me negotiate counter proposal")
-    assert res_neg.strategy == STRATEGY_NEGOTIATE
-
     res_sum = engine._build_fallback_result("Provide a summary overview")
     assert res_sum.strategy == STRATEGY_SUMMARIZE

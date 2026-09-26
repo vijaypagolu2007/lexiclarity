@@ -13,6 +13,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
+import { requireLegalDocument } from '../utils/guardrail';
 
 interface CompareTabProps {
   docsLibrary: LoadedDocument[];
@@ -21,7 +22,7 @@ interface CompareTabProps {
   onSelectDocA: (id: string) => void;
   onSelectDocB: (id: string) => void;
   onLoadComparePair: () => void;
-  onUploadDocs: (files: FileList) => void;
+  onUploadDocs: (files: File[]) => void;
   result?: CompareResult | null;
   onResultChange?: (result: CompareResult | null) => void;
 }
@@ -79,6 +80,8 @@ export const CompareTab: React.FC<CompareTabProps> = ({
     setError(null);
 
     try {
+      await requireLegalDocument(docA);
+      await requireLegalDocument(docB);
       const res = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,7 +171,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
             type="file"
             multiple
             accept=".txt,.md,.doc,.docx,.pdf,.json"
-            onChange={(e) => e.target.files && onUploadDocs(e.target.files)}
+            onChange={(e) => e.target.files && onUploadDocs(Array.from(e.target.files))}
             className="hidden"
           />
           <button
@@ -529,6 +532,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
             <DocumentPdfPreview
               docText={previewCitation.title === docBObj?.name ? docB : docA}
               docTitle={previewCitation.title}
+              sourceUrl={previewCitation.title === docBObj?.name ? docBObj?.sourceUrl : docAObj?.sourceUrl}
               highlightText={previewCitation.text}
               onClose={() => setPreviewCitation(null)}
               isModal={true}

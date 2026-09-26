@@ -9,6 +9,22 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+DEFAULT_GENERATION_MODEL = "gemini-3.6-flash"
+
+
+def resolve_model_name(requested: str | None) -> str:
+    """Accept only the verified generation model for production calls."""
+    return requested if requested == DEFAULT_GENERATION_MODEL else DEFAULT_GENERATION_MODEL
+
+
+class AppConfig:
+    """Shared application limits and model configuration."""
+
+    MAX_FILE_BYTES = 10 * 1024 * 1024
+    MAX_PAGES = 50
+    MAX_CHARS = 120_000
+    MODEL_NAME = resolve_model_name(os.environ.get("GEMINI_MODEL"))
+
 
 def _get_bool(key: str, default: bool) -> bool:
     val = os.environ.get(key, "").strip().lower()
@@ -73,14 +89,9 @@ def get_gemini_config() -> GeminiConfig:
     """Load Gemini configuration from environment variables."""
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     raw_model = os.environ.get("GEMINI_MODEL")
-    model = "gemini-3.6-flash"
-    if (
-        raw_model
-        and raw_model.startswith("gemini-")
-        and raw_model not in ("gemini-2.5-flash", "gemini-2.5-pro")
-        and not raw_model.startswith("AQ.")
-    ):
-        model = raw_model
+    # Keep model selection conservative. An arbitrary environment override can
+    # silently select a retired or incompatible model in production.
+    model = resolve_model_name(raw_model)
 
     return GeminiConfig(
         api_key=api_key if api_key else None,

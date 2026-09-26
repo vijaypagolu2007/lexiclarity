@@ -15,12 +15,10 @@ logger = logging.getLogger(__name__)
 
 # Supported intent choices
 INTENT_CHOICES = (
-    "clarify",
     "explain",
     "compare",
     "summarize",
     "analyze",
-    "negotiate",
     "other",
 )
 
@@ -167,10 +165,9 @@ class JevClient:
             "intent": Choice(
                 instructions=(
                     "Classify the primary user intent regarding the legal document or clause. "
-                    "Options include: clarify (interpret specific clause/ambiguity), "
-                    "explain (plain language meaning), compare (differences between contracts), "
-                    "summarize (overall contract summary), analyze (risk assessment), "
-                    "negotiate (draft counter-terms), or other."
+                    "Options include: explain (plain language meaning), compare (differences "
+                    "between contracts), summarize (overall contract summary), analyze (risk "
+                    "assessment), or other."
                 ),
                 criteria=criteria_dict,
             ),

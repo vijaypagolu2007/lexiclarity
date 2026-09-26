@@ -68,16 +68,6 @@ def main() -> None:
     if "clause_map" not in data:
         data["clause_map"] = call("map", "map", f"document_text:\n{doc_a}")
         _save()
-    if "clarify_indemnity" not in data:
-        data["clarify_indemnity"] = call(
-            "clarify",
-            "clarify",
-            "clause_text:\nThe Tenant shall indemnify and hold harmless the Landlord from and against any and all "
-            "claims, damages, losses, and expenses, including legal fees, arising out of or in connection with the "
-            "Tenant's use or occupation of the Premises, without any limitation as to amount."
-            f"\n\ndocument_text:\n{doc_a}",
-        )
-        _save()
     if "compare" not in data:
         data["compare"] = call(
             "compare", "compare", f"document_a:\n{doc_a}\n\ndocument_b:\n{doc_b}"
@@ -96,12 +86,6 @@ def main() -> None:
             f"\n\ndocument_text:\n{doc_a}",
         )
         _save()
-    if "lawyer_prep" not in data:
-        data["lawyer_prep"] = call(
-            "lawyer_prep", "lawyer_prep", f"document_text:\n{doc_a}"
-        )
-        _save()
-
     chat_qa = data.setdefault("chat_answers", {})
     for q in (
         "When can the landlord raise the rent?",

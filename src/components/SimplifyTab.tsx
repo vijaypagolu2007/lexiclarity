@@ -6,9 +6,11 @@ import { exportAsPdf, exportAsTxt } from '../utils/export';
 import { ExportDropdown } from './ExportDropdown';
 import { BookOpen, Volume2, VolumeX, Copy, Check, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
+import { requireLegalDocument } from '../utils/guardrail';
 
 interface SimplifyTabProps {
   docText: string;
+  sourceUrl?: string;
   onOpenDocPrompt: () => void;
   result?: SimplifyResult | null;
   onResultChange?: (result: SimplifyResult | null) => void;
@@ -16,6 +18,7 @@ interface SimplifyTabProps {
 
 export const SimplifyTab: React.FC<SimplifyTabProps> = ({
   docText,
+  sourceUrl,
   onOpenDocPrompt,
   result: externalResult,
   onResultChange,
@@ -49,6 +52,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
     setIsPlayingAudio(false);
 
     try {
+      await requireLegalDocument(docText);
       const res = await fetch('/api/simplify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -452,6 +456,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
             <DocumentPdfPreview
               docText={docText}
               docTitle="Simplified Clause Source Citation"
+              sourceUrl={sourceUrl}
               highlightText={previewCitation}
               onClose={() => setPreviewCitation(null)}
               isModal={true}

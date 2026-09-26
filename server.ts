@@ -4,12 +4,14 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
@@ -27,16 +29,7 @@ function getAI(): GoogleGenAI | null {
 
 function getValidGeminiModel(): string {
   const envModel = process.env.GEMINI_MODEL;
-  if (
-    envModel &&
-    envModel.startsWith('gemini-') &&
-    envModel !== 'gemini-2.5-flash' &&
-    envModel !== 'gemini-2.5-pro' &&
-    !envModel.startsWith('AQ.')
-  ) {
-    return envModel;
-  }
-  return 'gemini-3.8-flash';
+  return envModel === 'gemini-3.6-flash' ? envModel : 'gemini-3.6-flash';
 }
 
 const MODEL_NAME = getValidGeminiModel();
@@ -45,7 +38,7 @@ const MODEL_NAME = getValidGeminiModel();
 const promptsCache: Record<string, string> = {};
 function getPrompt(name: string): string {
   if (promptsCache[name]) return promptsCache[name];
-  const filePath = path.join(__dirname, 'prompts', `${name}.md`);
+  const filePath = resolveAsset(path.join('prompts', `${name}.md`));
   if (fs.existsSync(filePath)) {
     const content = fs.readFileSync(filePath, 'utf-8');
     promptsCache[name] = content;
@@ -54,21 +47,33 @@ function getPrompt(name: string): string {
   return '';
 }
 
+// Vercel bundles this file under /api, while local Node runs it from the
+// repository root. Resolve assets from both locations so prompts and showcase
+// fallbacks work in either runtime.
+function resolveAsset(relativePath: string): string {
+  const candidates = [
+    path.join(process.cwd(), relativePath),
+    path.join(__dirname, relativePath),
+    path.join(__dirname, '..', relativePath),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+}
+
 // Load Pre-computed Showcase and Sample Files
 let sampleAgreementText = '';
 let sampleRevisedAgreementText = '';
 let sampleShowcaseData: any = null;
 
 try {
-  const samplePath = path.join(__dirname, 'samples', 'sample_rental_agreement.txt');
+  const samplePath = resolveAsset(path.join('samples', 'sample_rental_agreement.txt'));
   if (fs.existsSync(samplePath)) {
     sampleAgreementText = fs.readFileSync(samplePath, 'utf-8');
   }
-  const revisedPath = path.join(__dirname, 'samples', 'sample_rental_agreement_revised.txt');
+  const revisedPath = resolveAsset(path.join('samples', 'sample_rental_agreement_revised.txt'));
   if (fs.existsSync(revisedPath)) {
     sampleRevisedAgreementText = fs.readFileSync(revisedPath, 'utf-8');
   }
-  const showcasePath = path.join(__dirname, 'showcase', 'sample_showcase.json');
+  const showcasePath = resolveAsset(path.join('showcase', 'sample_showcase.json'));
   if (fs.existsSync(showcasePath)) {
     sampleShowcaseData = JSON.parse(fs.readFileSync(showcasePath, 'utf-8'));
   }
@@ -99,12 +104,11 @@ async function callGeminiJson(promptName: string, payload: string): Promise<any>
   const taskPrompt = getPrompt(promptName);
   const fullPrompt = `${taskPrompt}\n\n===== INPUT =====\n${payload}`;
 
-  // Diverse candidate list across model series to bypass single-model rate limits or temporary high demand
+  // Keep retries on supported generation models only. Embedding models are
+  // configured separately and are never used for generation.
   const candidateModels = Array.from(
     new Set([
       MODEL_NAME,
-      'gemini-3.8-flash',
-      'gemini-3.1-flash-lite',
       'gemini-flash-latest',
     ])
   );
@@ -265,26 +269,6 @@ app.post('/api/map', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/clarify', async (req: Request, res: Response) => {
-  const { clause_text, document_text = '' } = req.body;
-  if (!clause_text) {
-    return res.status(400).json({ error: 'clause_text is required' });
-  }
-
-  // Check if it's the indemnity clause from sample
-  if (clause_text.toLowerCase().includes('indemnify') && sampleShowcaseData?.clarify_indemnity) {
-    return res.json(sampleShowcaseData.clarify_indemnity);
-  }
-
-  try {
-    const payload = `clause_text:\n${clause_text}\n\ndocument_text:\n${document_text.slice(0, 30000)}`;
-    const result = await callGeminiJson('clarify', payload);
-    return res.json(result);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 app.post('/api/compare', async (req: Request, res: Response) => {
   const { document_a, document_b } = req.body;
   if (!document_a || !document_b) {
@@ -351,53 +335,6 @@ app.post('/api/chat', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/lawyer-prep', async (req: Request, res: Response) => {
-  const { document_text } = req.body;
-  if (!document_text) {
-    return res.status(400).json({ error: 'document_text is required' });
-  }
-
-  if (isSampleDocument(document_text) && sampleShowcaseData?.lawyer_prep) {
-    return res.json(sampleShowcaseData.lawyer_prep);
-  }
-
-  try {
-    const payload = `document_text:\n${document_text.slice(0, 60000)}`;
-    const result = await callGeminiJson('lawyer_prep', payload);
-    return res.json(result);
-  } catch (err: any) {
-    if (isSampleDocument(document_text) && sampleShowcaseData?.lawyer_prep) {
-      return res.json(sampleShowcaseData.lawyer_prep);
-    }
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/negotiate', async (req: Request, res: Response) => {
-  const { clause_text } = req.body;
-  if (!clause_text) {
-    return res.status(400).json({ error: 'clause_text is required' });
-  }
-
-  try {
-    const payload = `original_clause:\n${clause_text}`;
-    const result = await callGeminiJson('negotiate', payload);
-    return res.json(result);
-  } catch (err: any) {
-    // If indemnity clause from sample
-    if (clause_text.toLowerCase().includes('indemnify')) {
-      return res.json({
-        negotiation_goal: 'Cap tenant indemnity and limit liability strictly to tenant negligence.',
-        why_negotiate: 'The original clause imposes uncapped, one-sided financial exposure on the tenant for all claims.',
-        proposed_clause: 'The Tenant agrees to indemnify the Landlord against direct damages arising solely from the Tenant’s gross negligence or willful misconduct, with total liability capped at an amount equal to two months’ rent.',
-        tradeoff: 'The Landlord may request reciprocal indemnity or require tenant renter insurance coverage.',
-        source_span: clause_text.slice(0, 200),
-      });
-    }
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 // ----------------------------------------------------
 // VITE OR STATIC SERVING
 // ----------------------------------------------------
@@ -405,6 +342,8 @@ app.post('/api/negotiate', async (req: Request, res: Response) => {
 async function start() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
+      configFile: false,
+      plugins: [react(), tailwindcss()],
       server: { middlewareMode: true },
       appType: 'spa',
     });
@@ -422,7 +361,13 @@ async function start() {
   });
 }
 
-start().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+// Vercel imports the Express app as a serverless handler. Starting a listener
+// there causes the function to fail before it can serve any request.
+export default app;
+
+if (!process.env.VERCEL) {
+  start().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}

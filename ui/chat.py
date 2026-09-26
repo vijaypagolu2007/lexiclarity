@@ -5,12 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from src.decision_engine import (
-    STRATEGY_CLARIFY,
-    DecisionEngine,
-    DecisionResult,
-    get_decision_engine,
-)
+from src.decision_engine import DecisionEngine, DecisionResult, get_decision_engine
 from src.llm import run_task
 from src.retrieval import retrieve
 
@@ -39,7 +34,6 @@ def handle_chat_query(
     question: str,
     document_text: str,
     decision_engine: DecisionEngine | None = None,
-    force_direct: bool = False,
 ) -> dict[str, Any]:
     """Orchestrate chat pipeline: Jev decision -> deterministic routing -> Gemini RAG.
 
@@ -55,31 +49,9 @@ def handle_chat_query(
 
     debug_panel = format_debug_decision_panel(decision)
 
-    # Step 2: Deterministic application routing
-    if decision.strategy == STRATEGY_CLARIFY and not force_direct:
-        # Request is ambiguous or high-risk: prompt user for clarification before generating response
-        clarification_reason = (
-            "Your question touches on high-risk contractual liability or has multiple possible interpretations."
-            if decision.risk >= 60.0
-            else "Your question is somewhat ambiguous given the document's provisions."
-        )
-        return {
-            "status": "requires_clarification",
-            "clarification_needed": True,
-            "clarification_message": (
-                f"{clarification_reason} Would you like an overview of the general clause, "
-                "or are you asking about specific exceptions or financial liability?"
-            ),
-            "suggested_actions": [
-                "Explain the standard rule in plain English",
-                "Analyze the legal risk and liability exposure",
-                "Draft negotiation points or counter-clauses",
-            ],
-            "decision": decision.to_dict(),
-            "debug_panel": debug_panel,
-        }
-
-    # Step 3: Direct RAG pipeline
+    # Direct grounded RAG pipeline. Ambiguity and risk remain visible in the
+    # debug metadata; the product does not expose separate clarification or
+    # negotiation modes.
     chunks = retrieve(question, document_text, k=5)
     payload = (
         f"question: {question}\n\n"

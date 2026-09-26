@@ -16,10 +16,8 @@ from core.jev import (
     JevTimeoutError,
 )
 from src.decision_engine import (
-    STRATEGY_CLARIFY,
     STRATEGY_COMPARE,
     STRATEGY_DIRECT_RAG,
-    STRATEGY_NEGOTIATE,
     STRATEGY_SUMMARIZE,
     DecisionEngine,
     DecisionResult,
@@ -90,7 +88,7 @@ class TestDecisionEngineRouting:
         assert res.intent == "explain"
         assert res.is_fallback is False
 
-    def test_clarify_when_ambiguity_above_threshold(self, mock_client):
+    def test_high_ambiguity_still_uses_grounded_rag(self, mock_client):
         config = JevConfig(ambiguity_threshold=0.60)
         mock_client.evaluate_intent_ambiguity_risk.return_value = _make_eval_result(
             intent="explain",
@@ -100,10 +98,10 @@ class TestDecisionEngineRouting:
         engine = DecisionEngine(jev_client=mock_client, config=config)
         res = engine.decide(user_query="Can I make alterations to the room?")
 
-        assert res.strategy == STRATEGY_CLARIFY
+        assert res.strategy == STRATEGY_DIRECT_RAG
         assert res.ambiguity == 0.75
 
-    def test_clarify_when_risk_above_threshold(self, mock_client):
+    def test_high_risk_still_uses_grounded_rag(self, mock_client):
         config = JevConfig(risk_threshold=60.0)
         mock_client.evaluate_intent_ambiguity_risk.return_value = _make_eval_result(
             intent="explain",
@@ -113,20 +111,8 @@ class TestDecisionEngineRouting:
         engine = DecisionEngine(jev_client=mock_client, config=config)
         res = engine.decide(user_query="What happens if the pipes burst?")
 
-        assert res.strategy == STRATEGY_CLARIFY
+        assert res.strategy == STRATEGY_DIRECT_RAG
         assert res.risk == 75.0
-
-    def test_clarify_when_intent_is_explicitly_clarify(self, mock_client):
-        mock_client.evaluate_intent_ambiguity_risk.return_value = _make_eval_result(
-            intent="clarify",
-            ambiguity=0.30,
-            raw_score=2.0,  # risk 25.0
-        )
-        engine = DecisionEngine(jev_client=mock_client)
-        res = engine.decide(user_query="Can you clarify clause 8?")
-
-        assert res.strategy == STRATEGY_CLARIFY
-        assert res.intent == "clarify"
 
     def test_intent_based_routing_compare(self, mock_client):
         mock_client.evaluate_intent_ambiguity_risk.return_value = _make_eval_result(
@@ -148,23 +134,13 @@ class TestDecisionEngineRouting:
         res = engine.decide(user_query="Give me a summary of key terms")
         assert res.strategy == STRATEGY_SUMMARIZE
 
-    def test_intent_based_routing_negotiate(self, mock_client):
-        mock_client.evaluate_intent_ambiguity_risk.return_value = _make_eval_result(
-            intent="negotiate",
-            ambiguity=0.25,
-            raw_score=2.5,
-        )
-        engine = DecisionEngine(jev_client=mock_client)
-        res = engine.decide(user_query="How do I counter this indemnity clause?")
-        assert res.strategy == STRATEGY_NEGOTIATE
-
     def test_low_confidence_safeguard(self, mock_client):
         config = JevConfig(
             confidence_threshold=0.75,
             risk_threshold=60.0,
             ambiguity_threshold=0.60,
         )
-        # Moderate risk (40.0) with low confidence (0.50) triggers CLARIFY safeguard
+        # Moderate risk with low confidence remains grounded RAG.
         mock_client.evaluate_intent_ambiguity_risk.return_value = _make_eval_result(
             intent="explain",
             intent_conf=0.50,
@@ -174,7 +150,7 @@ class TestDecisionEngineRouting:
         )
         engine = DecisionEngine(jev_client=mock_client, config=config)
         res = engine.decide(user_query="Am I liable for structural repairs?")
-        assert res.strategy == STRATEGY_CLARIFY
+        assert res.strategy == STRATEGY_DIRECT_RAG
 
 
 class TestFallbackAndFailureResilience:

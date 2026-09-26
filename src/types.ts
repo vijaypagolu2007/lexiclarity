@@ -86,4 +86,6 @@ export interface LoadedDocument {
   wordCount: number;
   clauseCount: number;
   uploadedAt?: number;
+  sourceUrl?: string;
+  mimeType?: string;
 }
