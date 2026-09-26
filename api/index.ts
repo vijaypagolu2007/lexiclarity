@@ -314,7 +314,7 @@ async function handleRoute(route: string, body: JsonObject): Promise<{ status: n
       : [['Document', requiredText(body, 'document_text')]] as const;
     for (const [label, text] of documents) {
       const assessment = assessDocument(text);
-      if (!assessment.is_legal) throw new ApiError(422, `${label}: ${assessment.reason}`);
+      if (assessment.should_block) throw new ApiError(422, `${label}: ${assessment.reason}`);
     }
   }
   if (route === '/simplify') {
@@ -353,7 +353,7 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     if (req.method === 'GET' && route === '/sample') return send(res, 200, { original: loadSample('samples/sample_rental_agreement.txt'), revised: loadSample('samples/sample_rental_agreement_revised.txt') });
     if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed.' });
     if (!['/guardrail', '/simplify', '/map', '/compare', '/chat'].includes(route)) return send(res, 404, { error: 'API route not found.' });
-    if (route !== '/guardrail' && isRateLimited(req)) return send(res, 429, { error: 'Too many requests. Please wait a minute and try again.' });
+    if (isRateLimited(req)) return send(res, 429, { error: 'Too many requests. Please wait a minute and try again.' });
     const body = await getBody(req);
     const result = await handleRoute(route, body);
     return send(res, result.status, result.body);

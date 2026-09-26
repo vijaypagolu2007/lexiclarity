@@ -92,7 +92,7 @@ test('analysis API enforces the legal-document gate without a separate client pr
     return new Response('unexpected model call', { status: 500 });
   };
   const nonLegal = await invoke(request('POST', '/api/simplify', {
-    document_text: 'This article discusses the words contract and agreement in ordinary language.',
+    document_text: 'Recipe: combine flour, water, and yeast; bake until the crust is brown.',
   }, '192.0.2.92'));
   assert.equal(nonLegal.statusCode, 422);
   assert.equal(modelCalls, 0);
@@ -102,6 +102,35 @@ test('analysis API enforces the legal-document gate without a separate client pr
   }, '192.0.2.93'));
   assert.equal(statute.statusCode, 200);
   assert.equal((statute.body as { is_legal: boolean }).is_legal, true);
+});
+
+test('uncertain document styles are allowed through with a low-confidence assessment', async () => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  let modelCalls = 0;
+  const source = 'The contracting parties should follow procedural requirements listed in this document.';
+  globalThis.fetch = async () => {
+    modelCalls += 1;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+      document_type: 'Unclassified document',
+      sections: [{ section_id: 'terms', original_heading: 'Terms', plain_text: 'The parties should follow the listed steps.', source_span: source }],
+      key_terms: [],
+    }) }] } }] }), { status: 200 });
+  };
+  const assessment = await invoke(request('POST', '/api/guardrail', { document_text: source }, '192.0.2.94'));
+  assert.equal((assessment.body as { should_block: boolean; confidence: string }).should_block, false);
+  assert.equal((assessment.body as { confidence: string }).confidence, 'low');
+  const result = await invoke(request('POST', '/api/simplify', { document_text: source }, '192.0.2.95'));
+  assert.equal(result.statusCode, 200);
+  assert.equal(modelCalls, 1);
+});
+
+test('guardrail requests are covered by per-client rate limiting', async () => {
+  resetRateLimitsForTests();
+  const body = { document_text: 'A recipe for soup with vegetables and herbs.' };
+  for (let index = 0; index < 12; index += 1) {
+    assert.equal((await invoke(request('POST', '/api/guardrail', body, '192.0.2.96'))).statusCode, 200);
+  }
+  assert.equal((await invoke(request('POST', '/api/guardrail', body, '192.0.2.96'))).statusCode, 429);
 });
 
 test('Gemini receives retrieved chat context and versioned prompts', async () => {

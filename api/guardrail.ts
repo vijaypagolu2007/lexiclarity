@@ -1,7 +1,8 @@
 export type DocumentAssessment = {
   is_legal: boolean;
+  should_block: boolean;
   document_kind: string;
-  confidence: 'medium';
+  confidence: 'medium' | 'low';
   reason: string;
 };
 
@@ -12,10 +13,17 @@ export function assessDocument(text: string): DocumentAssessment {
   const legalSignals = /\b(shall|hereby|party|parties|tenant|landlord|lessor|lessee|obligation|liability|indemnif\w*|termination|governing law|effective date|breach|jurisdiction|clause|plaintiff|defendant|petitioner|respondent|court|judge|statute|regulation|ordinance|pursuant to|whereas|herein|rent|security deposit|warranty|waiver|consent|attorney|claimant|applicable law|permission|signature|notice period|deposit)\b/g;
   const signalCount = new Set(lower.match(legalSignals) || []).size;
   const isLegal = (documentType && signalCount >= 1) || signalCount >= 2;
+  const clearlyNonLegal = /\b(recipe|poem|short story|novel|news article|blog post|shopping list|meeting notes|travel itinerary|personal journal|homework assignment)\b/.test(lower);
+  const shouldBlock = !isLegal && clearlyNonLegal && signalCount === 0;
   return {
     is_legal: isLegal,
-    document_kind: isLegal ? 'Legal Document' : 'Non-legal document',
-    confidence: 'medium',
-    reason: isLegal ? 'Contains legal-document or legal-process language.' : 'Does not contain enough legal-document indicators to analyze safely.',
+    should_block: shouldBlock,
+    document_kind: isLegal ? 'Legal Document' : shouldBlock ? 'Non-legal document' : 'Unclassified document',
+    confidence: isLegal || shouldBlock ? 'medium' : 'low',
+    reason: isLegal
+      ? 'Contains legal-document or legal-process language.'
+      : shouldBlock
+        ? 'This appears to be clearly non-legal material.'
+        : 'Document type is uncertain; analysis may continue, but verify the results carefully.',
   };
 }
