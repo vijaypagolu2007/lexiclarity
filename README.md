@@ -56,7 +56,7 @@ Run the TypeScript API and rendered accessibility regression checks with `npm ru
 ```
 Browser (React/Vite)
   └─ api/index.ts      Shared Vercel/local API handler and Gemini orchestration
-  └─ api/retrieval.ts  Bounded chunking and BM25-style passage ranking for document Q&A
+  └─ api/_retrieval.ts  Bounded chunking and BM25-style passage ranking for document Q&A
   └─ server.ts         Local Vite/static host delegating /api/* to api/index.ts
   └─ src/utils/extract.ts  PDF · DOCX · TXT upload extraction
   └─ src/components/  Simplify · Explorer · Compare · Document Chat
