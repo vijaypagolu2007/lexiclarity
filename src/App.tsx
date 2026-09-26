@@ -265,14 +265,28 @@ export function App() {
         {/* Main Workspace Area */}
         <main className="flex-1 flex flex-col min-w-0">
           <div className="border-b border-stone-200 bg-stone-50/60 px-4 sm:px-6 pt-3 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-            <nav className="flex space-x-1 sm:space-x-2 min-w-max pb-2.5">
+            <nav className="flex space-x-1 sm:space-x-2 min-w-max pb-2.5" role="tablist" aria-label="Document tools">
               {TABS.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
+                    id={`tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls={`panel-${tab.id}`}
+                    tabIndex={isActive ? 0 : -1}
                     onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Home' && event.key !== 'End') return;
+                      event.preventDefault();
+                      const current = TABS.findIndex((item) => item.id === activeTab);
+                      const next = event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length;
+                      setActiveTab(TABS[next].id);
+                      requestAnimationFrame(() => document.getElementById(`tab-${TABS[next].id}`)?.focus());
+                    }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all select-none ${
                       isActive
                         ? 'bg-amber-700 text-white shadow-xs'
@@ -291,6 +305,10 @@ export function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
+                id={`panel-${activeTab}`}
+                role="tabpanel"
+                aria-labelledby={`tab-${activeTab}`}
+                tabIndex={0}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}

@@ -221,6 +221,8 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
             {(['simple', 'simpler', 'summary'] as const).map((lvl) => (
               <button
                 key={lvl}
+                type="button"
+                aria-pressed={readingLevel === lvl}
                 onClick={() => setReadingLevel(lvl)}
                 className={`px-3 py-1.5 rounded-md capitalize transition-all ${
                   readingLevel === lvl
@@ -249,7 +251,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
+        <div role="alert" className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-red-600 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -281,6 +283,8 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
+                aria-label={isPlayingAudio ? 'Stop reading the simplified document' : 'Read the simplified document aloud'}
                 onClick={handleAudioToggle}
                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   isPlayingAudio
@@ -296,6 +300,8 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
               </button>
 
               <button
+                type="button"
+                aria-label="Copy simplified document text"
                 onClick={handleCopy}
                 className="px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 text-xs font-medium flex items-center gap-1 transition-colors"
                 title="Copy plain text"
@@ -345,6 +351,9 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
                   {section.source_span && (
                     <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
                       <button
+                        type="button"
+                        aria-expanded={isSourceExpanded}
+                        aria-label={`${isSourceExpanded ? 'Hide' : 'Show'} source quote for ${section.original_heading}`}
                         onClick={() => toggleSource(section.section_id || String(idx))}
                         className="text-xs text-stone-600 hover:text-stone-900 font-medium flex items-center gap-1"
                       >

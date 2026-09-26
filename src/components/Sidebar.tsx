@@ -38,29 +38,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="w-full md:w-80 flex-shrink-0 flex flex-col gap-5 p-4 sm:p-5 bg-white border-r border-stone-200">
       {/* Central Application Upload Box */}
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2">
+        <p className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-2" id="upload-documents-label">
           Upload Contracts / Documents
-        </label>
-        <div
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".txt,.md,.pdf,.docx,.doc,.json"
+          onChange={handleFileChange}
+          className="sr-only"
+          aria-labelledby="upload-documents-label"
+        />
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-stone-300 hover:border-amber-600/70 rounded-xl p-4 text-center cursor-pointer transition-colors bg-stone-50/50 hover:bg-stone-50 group"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            const files = Array.from(event.dataTransfer.files);
+            if (files.length) onUploadDocs(files);
+          }}
+          className="w-full border-2 border-dashed border-stone-300 hover:border-amber-600/70 rounded-xl p-4 text-center cursor-pointer transition-colors bg-stone-50/50 hover:bg-stone-50 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
+          aria-describedby="upload-documents-help"
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".txt,.md,.pdf,.docx,.doc,.json"
-            onChange={handleFileChange}
-            className="hidden"
-          />
           <Upload className="w-6 h-6 text-stone-600 group-hover:text-amber-700 mx-auto mb-1.5 transition-colors" />
           <p className="text-xs font-medium text-stone-700 group-hover:text-stone-900">
             Click or drag documents here
           </p>
-          <p className="text-[11px] text-stone-500 mt-0.5">
+          <p id="upload-documents-help" className="text-[11px] text-stone-500 mt-0.5">
             TXT, PDF, DOCX (Upload 1 or multiple)
           </p>
-        </div>
+        </button>
       </div>
 
       {/* Document Library (Selection for Simplify / Explorer / Chat) */}
@@ -96,14 +105,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <div
                   key={doc.id}
-                  onClick={() => onSelectActiveDoc(doc.id)}
-                  className={`group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium border cursor-pointer transition-all ${
+                  className={`group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
                     isActive
                       ? 'bg-amber-50 border-amber-300 text-amber-950 shadow-xs'
                       : 'bg-stone-50 hover:bg-stone-100 border-stone-200 text-stone-700'
                   }`}
                 >
-                  <div className="flex items-center space-x-2 truncate min-w-0 pr-1">
+                  <button
+                    type="button"
+                    onClick={() => onSelectActiveDoc(doc.id)}
+                    aria-current={isActive ? 'true' : undefined}
+                    aria-label={`${isActive ? 'Current document' : 'Select document'}: ${doc.name}`}
+                    className="flex items-center space-x-2 truncate min-w-0 pr-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700 rounded"
+                  >
                     <FileText className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-700' : 'text-stone-400'}`} />
                     <div className="truncate min-w-0">
                       <p className="truncate font-medium leading-tight">{doc.name}</p>
@@ -111,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {doc.wordCount.toLocaleString()} words
                       </p>
                     </div>
-                  </div>
+                  </button>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {isActive ? (
@@ -130,6 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }}
                         className="p-1 text-stone-400 hover:text-red-600 rounded transition-colors"
                         title="Remove document"
+                        aria-label={`Remove ${doc.name}`}
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>

@@ -113,6 +113,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         role: 'assistant',
         content: data.answer,
         citations: data.citations || [],
+        grounded: data.grounded,
         advice_declined: data.advice_declined,
         timestamp: Date.now(),
       };
@@ -160,9 +161,11 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         </div>
 
         <button
+          type="button"
           onClick={clearChat}
           className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 text-stone-500 hover:text-stone-800 text-xs transition-colors flex items-center gap-1"
           title="Clear Chat"
+          aria-label="Clear chat history"
         >
           <Trash2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Clear</span>
@@ -185,7 +188,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       </div>
 
       {/* Messages Feed */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5 h-[420px] overflow-y-auto space-y-4 shadow-xs">
+      <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5 h-[420px] overflow-y-auto space-y-4 shadow-xs" role="log" aria-label="Document chat messages" aria-live="polite" aria-relevant="additions">
         {messages.map((m) => {
           const isUser = m.role === 'user';
           const isExpanded = expandedCitations[m.id];
@@ -215,6 +218,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                   </p>
                   {!isUser && (
                     <button
+                      type="button"
                       onClick={() => handleSpeakMessage(m.id, m.content)}
                       className={`p-1 rounded-md text-xs transition-colors flex-shrink-0 ${
                         speakingMessageId === m.id
@@ -226,6 +230,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                           ? `Stop reading (${activeVoiceLang || 'Auto-Voice'})`
                           : 'Listen (Auto-detect language voice)'
                       }
+                      aria-label={speakingMessageId === m.id ? 'Stop reading answer aloud' : 'Read answer aloud'}
                     >
                       {speakingMessageId === m.id ? (
                         <VolumeX className="w-3.5 h-3.5" />
@@ -246,9 +251,14 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 )}
 
                 {/* Citation Drawer */}
+                {m.role === 'assistant' && m.grounded === false && (
+                  <p className="text-xs font-semibold text-amber-900" role="status">Needs verification: the answer lacks fully verified document support. Unsupported citations were removed.</p>
+                )}
+
                 {m.citations && m.citations.length > 0 && (
                   <div className="pt-2 border-t border-stone-200/70">
                     <button
+                      type="button"
                       onClick={() => toggleCitation(m.id)}
                       className="text-[11px] text-amber-800 hover:text-amber-900 font-semibold flex items-center gap-1"
                     >
@@ -282,7 +292,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         })}
 
         {loading && (
-          <div className="flex gap-3 items-center text-xs text-stone-500 italic">
+          <div className="flex gap-3 items-center text-xs text-stone-500 italic" role="status" aria-live="polite">
             <div className="w-7 h-7 rounded-lg bg-amber-700 text-white flex items-center justify-center">
               <Bot className="w-4 h-4" />
             </div>
@@ -300,10 +310,12 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         className="flex gap-2"
       >
         <input
+          id="document-question"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question about this contract (e.g., When can the landlord enter?)..."
+          aria-label="Ask a question about the selected legal document"
           disabled={loading}
           className="flex-1 text-xs sm:text-sm text-stone-900 bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-600 shadow-2xs"
         />

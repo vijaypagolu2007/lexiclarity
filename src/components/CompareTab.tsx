@@ -148,7 +148,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2.5">
+        <div role="alert" className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2.5">
           <ShieldAlert className="w-4 h-4 text-red-600 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -168,7 +168,8 @@ export const CompareTab: React.FC<CompareTabProps> = ({
             multiple
             accept=".txt,.md,.doc,.docx,.pdf,.json"
             onChange={(e) => e.target.files && onUploadDocs(Array.from(e.target.files))}
-            className="hidden"
+            className="sr-only"
+            aria-label="Add documents for comparison"
           />
           <button
             type="button"
@@ -203,6 +204,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
             <button
               type="button"
               onClick={handleSwap}
+              aria-label="Swap documents A and B"
               className="p-2.5 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 transition-all shadow-2xs"
               title="Swap Document A and Document B"
             >
@@ -279,6 +281,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
               <div className="flex items-center rounded-lg bg-stone-100 p-0.5 border border-stone-200">
                 <button
                   type="button"
+                  aria-pressed={viewMode === 'structured'}
                   onClick={() => setViewMode('structured')}
                   className={`px-3.5 py-1.5 rounded-md transition-all font-medium ${
                     viewMode === 'structured'
@@ -290,6 +293,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
                 </button>
                 <button
                   type="button"
+                  aria-pressed={viewMode === 'redline'}
                   onClick={() => setViewMode('redline')}
                   className={`px-3.5 py-1.5 rounded-md transition-all font-medium ${
                     viewMode === 'redline'
@@ -320,6 +324,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
+                  aria-pressed={redlineStyle === 'split'}
                   onClick={() => setRedlineStyle('split')}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 ${
                     redlineStyle === 'split'
@@ -331,6 +336,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
                 </button>
                 <button
                   type="button"
+                  aria-pressed={redlineStyle === 'inline'}
                   onClick={() => setRedlineStyle('inline')}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 ${
                     redlineStyle === 'inline'

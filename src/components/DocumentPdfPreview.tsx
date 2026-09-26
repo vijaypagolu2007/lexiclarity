@@ -161,6 +161,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
             <button
               type="button"
               onClick={handleZoomOut}
+              aria-label="Zoom out of document"
               className="p-1 hover:text-white rounded hover:bg-stone-700"
               title="Zoom Out"
             >
@@ -170,6 +171,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
             <button
               type="button"
               onClick={handleZoomIn}
+              aria-label="Zoom in on document"
               className="p-1 hover:text-white rounded hover:bg-stone-700"
               title="Zoom In"
             >
@@ -181,6 +183,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
             <button
               type="button"
               onClick={() => setIsFullscreen(!isFullscreen)}
+              aria-label={isFullscreen ? 'Exit full screen document preview' : 'Open full screen document preview'}
               className="p-1.5 hover:bg-stone-800 rounded-lg text-stone-400 hover:text-white border border-stone-700"
               title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reader'}
             >
@@ -192,6 +195,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close document preview"
               className="p-1.5 hover:bg-stone-800 rounded-lg text-stone-400 hover:text-red-400 border border-stone-700"
               title="Close Preview"
             >

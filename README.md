@@ -49,6 +49,8 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
+Run the TypeScript API and rendered accessibility regression checks with `npm run test:api`.
+
 ## Architecture
 
 ```
@@ -61,14 +63,16 @@ Browser (React/Vite)
   └─ prompts/*.md      Versioned system + task prompts (evaluator-inspectable)
 ```
 
+The deployed product is the TypeScript/Vercel application above. The Python modules under `core/`, `src/`, and `ui/` are retained as research/reference code and are not invoked by the deployed web API; their tests run separately in CI.
+
 ## Prompt engineering (PRD §8)
 
 All prompts are versioned under [`prompts/`](prompts/):
 
 - `system.md` — role, grounding, refusal, and output contracts
-- `guardrail.md` — legal-vs-non-legal classifier (runs before processing)
+- `guardrail.md` — reference classifier prompt; the deployed guardrail route currently uses a lightweight keyword heuristic
 - `simplify.md` / `map.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
-- Every schema includes `source_span`; `src/grounding.py` verifies each span against the source and the UI flags ungrounded citations instead of hiding them.
+- The deployed API checks response fields and verifies citation spans against source text before returning results; unsupported chat citations are removed and marked for verification.
 
 ## Deployment
 

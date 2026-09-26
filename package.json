@@ -7,7 +7,8 @@
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
     "build": "vite build --configLoader runner",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:api": "node --import tsx --test tests/api.test.ts tests/accessibility.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",

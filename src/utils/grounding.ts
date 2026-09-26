@@ -31,22 +31,7 @@ export function spanInDocument(span: string | null | undefined, document: string
   const sp = normalizeText(span);
   if (!sp || !doc) return false;
 
-  if (doc.includes(sp)) {
-    return true;
-  }
-
-  // Tolerate minor truncation: accept if an 8- or 5-word prefix of the span matches
-  const words = sp.split(' ');
-  for (const n of [12, 8, 5]) {
-    if (words.length >= n) {
-      const prefix = words.slice(0, n).join(' ');
-      if (doc.includes(prefix)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return doc.includes(sp);
 }
 
 export function checkItems<T extends { source_span?: string; grounded?: boolean }>(

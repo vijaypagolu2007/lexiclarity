@@ -37,9 +37,12 @@ async function start() {
     });
   }
 
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: Error & { status?: number; type?: string }, _req: Request, res: Response, _next: NextFunction) => {
     console.error('[LexiClarity] server error:', err.message);
-    if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+    if (!res.headersSent) {
+      const status = err.status === 413 || err.type === 'entity.too.large' ? 413 : err instanceof SyntaxError ? 400 : 500;
+      res.status(status).json({ error: status === 413 ? 'Request body exceeds the server limit.' : status === 400 ? 'Request body must contain valid JSON.' : 'Internal server error.' });
+    }
   });
 
   app.listen(PORT, '0.0.0.0', () => {

@@ -246,7 +246,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
+        <div role="alert" className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-red-600 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -435,6 +435,9 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                     {clause.source_span && (
                       <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
                         <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? 'Hide' : 'Show'} source quote for ${clause.heading}`}
                           onClick={() => toggleSource(clause.section_id || String(idx))}
                           className="text-xs text-stone-600 hover:text-stone-900 font-medium flex items-center gap-1"
                         >

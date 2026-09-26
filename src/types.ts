@@ -61,6 +61,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   citations?: string[];
+  grounded?: boolean;
   advice_declined?: boolean;
   timestamp?: number;
 }

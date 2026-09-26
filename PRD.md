@@ -104,22 +104,21 @@ The submission will be evaluated by PromptWars' upgraded AI Evaluator, so the pr
 User Browser
    │
    ▼
-[Frontend]  Streamlit / Next.js — upload, viewer, diff UI
+React/Vite client: upload and extract PDF/DOCX/TXT text locally
    │
    ▼
-[App Layer] Python (FastAPI) or Next.js API routes
-   │  ├─ Document parser: PyMuPDF / pdfplumber / python-docx
-   │  ├─ Chunking + retrieval (RAG over the uploaded doc)
-   │  └─ Prompt orchestration layer (versioned templates)
+TypeScript API handler (`api/index.ts`): request validation and limits,
+lexical chat retrieval, versioned prompts, Gemini orchestration,
+response schema checks, and citation verification
+   │
    ▼
-[Model]  Gemini API (Google for Developers collaboration)
-   │  ├─ Simplification prompt  (JSON schema output)
-   │  ├─ Clause map and risk prompt
-   │  ├─ Grounded chat prompt
-   │  └─ Comparison prompt (structured diff)
+Gemini API (server-side key)
+   │
    ▼
-[Post-processing] Citation mapper → faithfulness check → UI
+Validated JSON returned to the browser for viewing and export
 ```
+
+The Python modules under `core/`, `src/`, and `ui/` are retained as research/reference implementations and tests; they are not part of the deployed request path.
 
 **Why Gemini:** aligns with the Google for Developers collaboration; native JSON/structured output, long context window for full-document processing.
 
