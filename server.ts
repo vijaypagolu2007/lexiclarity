@@ -3,9 +3,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
-import { createServer as createViteServer } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -341,6 +338,11 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
 async function start() {
   if (process.env.NODE_ENV !== 'production') {
+    const [{ createServer: createViteServer }, { default: react }, { default: tailwindcss }] = await Promise.all([
+      import('vite'),
+      import('@vitejs/plugin-react'),
+      import('@tailwindcss/vite'),
+    ]);
     const vite = await createViteServer({
       configFile: false,
       plugins: [react(), tailwindcss()],
