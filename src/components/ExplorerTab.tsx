@@ -8,6 +8,7 @@ import { Compass, ShieldAlert, AlertTriangle, CheckCircle2, ChevronDown, Chevron
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
 import { requireLegalDocument } from '../utils/guardrail';
+import { readApiJson } from '../utils/api';
 
 interface ExplorerTabProps {
   docText: string;
@@ -70,12 +71,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         body: JSON.stringify({ document_text: docText }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to map clauses');
-      }
-
-      const data: ClauseMapResult = await res.json();
+      const data = await readApiJson<ClauseMapResult>(res);
       const verifiedClauses = checkItems(data.clauses || [], docText);
       const computedHealth = scoreClauses(verifiedClauses);
 

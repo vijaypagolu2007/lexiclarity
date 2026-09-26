@@ -7,6 +7,7 @@ import { ExportDropdown } from './ExportDropdown';
 import { BookOpen, Volume2, VolumeX, Copy, Check, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
 import { requireLegalDocument } from '../utils/guardrail';
+import { readApiJson } from '../utils/api';
 
 interface SimplifyTabProps {
   docText: string;
@@ -63,12 +64,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
         }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to simplify document');
-      }
-
-      const data: SimplifyResult = await res.json();
+      const data = await readApiJson<SimplifyResult>(res);
       // Run client-side source-grounding verification
       const verifiedSections = checkItems(data.sections || [], docText);
       setResult({

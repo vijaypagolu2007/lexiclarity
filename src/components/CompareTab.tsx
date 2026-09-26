@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
 import { requireLegalDocument } from '../utils/guardrail';
+import { readApiJson } from '../utils/api';
 
 interface CompareTabProps {
   docsLibrary: LoadedDocument[];
@@ -91,12 +92,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
         }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to compare documents');
-      }
-
-      const data: CompareResult = await res.json();
+      const data = await readApiJson<CompareResult>(res);
       setResult(data);
     } catch (err: any) {
       setError(err.message || 'An error occurred during comparison.');

@@ -3,6 +3,7 @@ import { ChatMessage } from '../types';
 import { MessageSquare, Send, ShieldAlert, Sparkles, User, Bot, Trash2, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
 import { speakText, stopSpeaking } from '../utils/speech';
 import { requireLegalDocument } from '../utils/guardrail';
+import { readApiJson } from '../utils/api';
 
 interface ChatTabProps {
   docText: string;
@@ -106,12 +107,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to get answer');
-      }
-
-      const data = await res.json();
+      const data = await readApiJson<any>(res);
       const botMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
