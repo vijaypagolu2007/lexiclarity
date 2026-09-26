@@ -4,7 +4,7 @@
 
 **AI for Legal Assistance & Access** — a GenAI web app that makes legal documents understandable to non-lawyers. Built for Hackathon. See [PRD.md](PRD.md).
 
-**Differentiators:** source-grounded explanations with verbatim citations · material contract comparison with "what changed for you" impact lines · privacy-first in-memory processing · multilingual + audio accessibility · works instantly in Showcase Mode with no API key.
+**Differentiators:** source-grounded explanations with verbatim citations · material contract comparison with "what changed for you" impact lines · privacy-first in-memory processing · audio accessibility.
 
 ## Features
 
@@ -14,7 +14,7 @@
 | 🧭 Clause Explorer | — | Builds a grounded clause map with risk levels, source spans, and related-clause links |
 | 🖊️ Signing-Today Card | — | One-tap 🟢 Good / 🟡 Watchouts / 🔴 Dealbreakers summary derived from the clause map |
 | 📊 Contract Health Score | — | Aggregates clause risk into a transparent 0–100 score with category breakdown and radar chart |
-| 🌐 Multilingual + Voice | — | Simplifies explanations in English, Hindi, Spanish, Tamil, or Telugu and reads the result aloud in-browser |
+| 🔊 Voice accessibility | — | Reads generated explanations aloud in-browser |
 | 🟥🟩 Redline + Audit Export | — | Shows side-by-side contract changes and exports fingerprinted JSON reports with model and grounding metadata |
 | 📚 Reference Pattern Signals | — | Matches clauses against a transparent bundled demo library without unsupported percentile claims |
 | ⚙️ Pipeline + Performance | — | Shows analysis progress and tracks latency, token usage, and session-local cache hits |
@@ -22,7 +22,7 @@
 | 💬 Ask Questions | FR-7 | Free-form Q&A grounded in your uploaded document (retrieval + Gemini) |
 | 📎 Source Grounding | FR-4 | Every output carries a verbatim citation; a post-generation faithfulness check flags any span not found in the source |
 | 🏷️ Evidence Transparency | — | Outputs labelled Directly stated / Strongly inferred / Needs verification, with confidence levels |
-| ⚡ Showcase Mode | — | Judges can explore every feature instantly with zero setup: pre-computed grounded analysis of the bundled sample, no API key required |
+| ⚡ Sample workflow | — | Judges can load the bundled sample agreement and test every workflow |
 | 🛡️ Guardrails | FR-6 | Non-legal documents are refused; scanned/empty/corrupted files get clear errors |
 | 🔒 Privacy | §6 | In-memory processing only — documents are never stored |
 
@@ -53,7 +53,8 @@ python -m pytest -q
 
 ```
 Browser (React/Vite)
-  └─ server.ts         Express API and Gemini orchestration
+  └─ api/index.ts      Shared Vercel/local API handler and Gemini orchestration
+  └─ server.ts         Local Vite/static host delegating /api/* to api/index.ts
   └─ src/utils/extract.ts  PDF · DOCX · TXT upload extraction
   └─ src/components/  Simplify · Explorer · Compare · Document Chat
   └─ src/utils/grounding.ts  Citation/source-span verification
@@ -71,7 +72,7 @@ All prompts are versioned under [`prompts/`](prompts/):
 
 ## Deployment
 
-Deploy as a Node service using `npm install`, `npm run build`, and `npm start`. Set `GEMINI_API_KEY` in the hosting provider’s secret store; never commit it.
+Deploy on Vercel with `npm install` and `npm run build`. Set `GEMINI_API_KEY` in the Production environment; never commit it.
 
 ## Future level-up ideas
 
