@@ -6,7 +6,6 @@ import { ExportDropdown } from './ExportDropdown';
 import { Compass, ShieldAlert, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
-import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
 import { keepTabFocusInside } from '../utils/accessibility';
 
@@ -64,7 +63,6 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     setError(null);
 
     try {
-      await requireLegalDocument(docText);
       const res = await fetch('/api/map', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

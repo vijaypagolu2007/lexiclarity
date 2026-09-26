@@ -85,6 +85,25 @@ test('rate limiting uses the platform client IP and legal guardrail avoids weak 
   assert.equal((lease.body as { is_legal: boolean }).is_legal, true);
 });
 
+test('analysis API enforces the legal-document gate without a separate client preflight', async () => {
+  let modelCalls = 0;
+  globalThis.fetch = async () => {
+    modelCalls += 1;
+    return new Response('unexpected model call', { status: 500 });
+  };
+  const nonLegal = await invoke(request('POST', '/api/simplify', {
+    document_text: 'This article discusses the words contract and agreement in ordinary language.',
+  }, '192.0.2.92'));
+  assert.equal(nonLegal.statusCode, 422);
+  assert.equal(modelCalls, 0);
+
+  const statute = await invoke(request('POST', '/api/guardrail', {
+    document_text: 'Statute: pursuant to section 14, the court shall enforce this regulation under applicable law.',
+  }, '192.0.2.93'));
+  assert.equal(statute.statusCode, 200);
+  assert.equal((statute.body as { is_legal: boolean }).is_legal, true);
+});
+
 test('Gemini receives retrieved chat context and versioned prompts', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
   let payload: Record<string, any> | undefined;
@@ -197,7 +216,7 @@ test('Gemini 429 retries only brief transient limits and explains exhausted dail
     }
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ answer: 'The rent is $900.', citations: ['The rent is $900 per month.'], advice_declined: false }) }] } }] }), { status: 200 });
   };
-  const transient = await invoke(request('POST', '/api/chat', { question: 'What is the rent?', document_text: 'The rent is $900 per month.' }, '192.0.2.31'));
+  const transient = await invoke(request('POST', '/api/chat', { question: 'What is the rent?', document_text: 'Lease agreement. The rent is $900 per month.' }, '192.0.2.31'));
   assert.equal(transient.statusCode, 200);
   assert.equal(attempts, 2);
 
@@ -206,7 +225,7 @@ test('Gemini 429 retries only brief transient limits and explains exhausted dail
     attempts += 1;
     return new Response(JSON.stringify({ error: { status: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] }] } }), { status: 429 });
   };
-  const exhausted = await invoke(request('POST', '/api/chat', { question: 'What is the rent?', document_text: 'The rent is $900 per month.' }, '192.0.2.32'));
+  const exhausted = await invoke(request('POST', '/api/chat', { question: 'What is the rent?', document_text: 'Lease agreement. The rent is $900 per month.' }, '192.0.2.32'));
   assert.equal(exhausted.statusCode, 503);
   assert.match((exhausted.body as { error: string }).error, /daily quota/i);
   assert.match((exhausted.body as { error: string }).error, /same project share quota/i);
@@ -216,12 +235,12 @@ test('Gemini 429 retries only brief transient limits and explains exhausted dail
 test('Gemini outages and malformed model schemas return safe error responses', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
   globalThis.fetch = async () => new Response('unavailable', { status: 503 });
-  const unavailable = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'The rent is $900 per month.' }));
+  const unavailable = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
   assert.equal(unavailable.statusCode, 502);
   assert.deepEqual(unavailable.body, { error: 'AI service could not process this request. Please retry.' });
 
   globalThis.fetch = async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"answer":42,"citations":[]}' }] } }] }), { status: 200 });
-  const invalid = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'The rent is $900 per month.' }));
+  const invalid = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
   assert.equal(invalid.statusCode, 502);
   assert.match((invalid.body as { error: string }).error, /required format/);
 });

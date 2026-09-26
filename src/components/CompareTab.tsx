@@ -13,7 +13,6 @@ import {
   FileText,
 } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
-import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
 import { keepTabFocusInside } from '../utils/accessibility';
 
@@ -82,8 +81,6 @@ export const CompareTab: React.FC<CompareTabProps> = ({
     setError(null);
 
     try {
-      await requireLegalDocument(docA);
-      await requireLegalDocument(docB);
       const res = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -5,7 +5,6 @@ import { speakText, stopSpeaking } from '../utils/speech';
 import { ExportDropdown } from './ExportDropdown';
 import { BookOpen, Volume2, VolumeX, Copy, Check, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
-import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
 import { keepTabFocusInside } from '../utils/accessibility';
 
@@ -52,7 +51,6 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
     setIsPlayingAudio(false);
 
     try {
-      await requireLegalDocument(docText);
       const res = await fetch('/api/simplify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

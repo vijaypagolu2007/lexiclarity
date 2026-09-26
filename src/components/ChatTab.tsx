@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ChatApiResponse, ChatMessage } from '../types';
 import { MessageSquare, Send, ShieldAlert, Sparkles, User, Bot, Trash2, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
 import { speakText, stopSpeaking } from '../utils/speech';
-import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
 
 interface ChatTabProps {
@@ -97,7 +96,6 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     setLoading(true);
 
     try {
-      await requireLegalDocument(docText);
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

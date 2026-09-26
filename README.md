@@ -71,7 +71,7 @@ The deployed product is the TypeScript/Vercel application above. The Python modu
 All prompts are versioned under [`prompts/`](prompts/):
 
 - `system.md` — role, grounding, refusal, and output contracts
-- `guardrail.md` — reference classifier prompt; the deployed guardrail route currently uses a lightweight keyword heuristic
+- `guardrail.md` — reference classifier prompt; deployed analysis routes share a lightweight server-side legal-document screen before calling Gemini
 - `simplify.md` / `map.md` / `compare.md` / `chat.md` — task prompts with strict JSON schemas
 - The deployed API checks response fields and verifies citation spans against source text before returning results; unsupported chat citations are removed and marked for verification. Chat retrieval splits long paragraphs into overlapping passages capped at 1,800 characters, ranks passages by query relevance, and sends at most five (9,000 characters total). It sends no passage context when none matches the query.
 

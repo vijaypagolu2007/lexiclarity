@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { assessDocument } from './guardrail';
 import { retrieveChunks } from './retrieval';
 
 type RequestLike = {
@@ -217,9 +218,9 @@ async function askGemini<T>(prompt: string, input: JsonObject): Promise<T> {
     let response: Response;
     for (let attempt = 0; ; attempt += 1) {
       response = await fetch(url, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: requestBody,
       });
       if (response.status !== 429) break;
@@ -304,12 +305,17 @@ function requiredText(body: JsonObject, key: string, maxChars = MAX_DOCUMENT_CHA
 async function handleRoute(route: string, body: JsonObject): Promise<{ status: number; body: JsonObject }> {
   if (route === '/guardrail') {
     const text = requiredText(body, 'document_text');
-    const lower = text.toLowerCase();
-    const documentType = /\b(contract|agreement|lease|tenancy|policy|terms of service|terms and conditions|notice|nda|non-disclosure|offer letter|memorandum of understanding|will|court order)\b/.test(lower);
-    const legalSignals = /\b(shall|hereby|party|parties|tenant|landlord|lessor|lessee|obligation|liability|indemnif\w*|termination|governing law|effective date|breach|jurisdiction|clause)\b/g;
-    const signalCount = new Set(lower.match(legalSignals) || []).size;
-    const legal = (documentType && signalCount >= 1) || signalCount >= 3;
-    return { status: 200, body: { is_legal: legal, document_kind: legal ? 'Legal Document' : 'Non-legal document', confidence: 'medium', reason: legal ? 'Contains contractual language.' : 'Does not contain enough legal terms.' } };
+    return { status: 200, body: { ...assessDocument(text) } };
+  }
+
+  if (['/simplify', '/map', '/chat', '/compare'].includes(route)) {
+    const documents = route === '/compare'
+      ? [['Document A', requiredText(body, 'document_a')], ['Document B', requiredText(body, 'document_b')]] as const
+      : [['Document', requiredText(body, 'document_text')]] as const;
+    for (const [label, text] of documents) {
+      const assessment = assessDocument(text);
+      if (!assessment.is_legal) throw new ApiError(422, `${label}: ${assessment.reason}`);
+    }
   }
   if (route === '/simplify') {
     const document = requiredText(body, 'document_text');
