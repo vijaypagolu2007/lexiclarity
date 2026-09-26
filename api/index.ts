@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { assessDocument } from './guardrail';
-import { retrieveChunks } from './retrieval';
+import { assessDocument } from './guardrail.js';
+import { retrieveChunks } from './retrieval.js';
 
 type RequestLike = {
   method?: string;
