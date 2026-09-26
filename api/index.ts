@@ -232,7 +232,12 @@ async function askGemini<T>(prompt: string, input: JsonObject): Promise<T> {
       throw new ApiError(503, formatGeminiRateLimitMessage(rateLimit));
     }
     if (!response.ok) {
-      throw new ApiError(502, 'AI service could not process this request. Please retry.');
+      if (response.status === 400) throw new ApiError(502, 'Gemini rejected the request (400). Check the configured model and request compatibility.');
+      if (response.status === 401) throw new ApiError(503, 'Gemini rejected the API key (401). Check GEMINI_API_KEY in the Production environment and redeploy.');
+      if (response.status === 403) throw new ApiError(503, 'Gemini denied access (403). Check that the Generative Language API is enabled and the key is permitted for this project.');
+      if (response.status === 404) throw new ApiError(503, 'The configured Gemini model was not found (404). Check GEMINI_MODEL.');
+      console.error('[LexiClarity] Gemini request failed', { status: response.status });
+      throw new ApiError(502, `Gemini service returned HTTP ${response.status}. Please check the project status and retry.`);
     }
     const json: unknown = await response.json();
     const payload = requireObject(json, 'Gemini response');

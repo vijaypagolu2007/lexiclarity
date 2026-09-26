@@ -266,7 +266,23 @@ test('Gemini outages and malformed model schemas return safe error responses', a
   globalThis.fetch = async () => new Response('unavailable', { status: 503 });
   const unavailable = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
   assert.equal(unavailable.statusCode, 502);
-  assert.deepEqual(unavailable.body, { error: 'AI service could not process this request. Please retry.' });
+  assert.deepEqual(unavailable.body, { error: 'Gemini service returned HTTP 503. Please check the project status and retry.' });
+
+  globalThis.fetch = async () => new Response('unauthorized', { status: 401 });
+  const invalidKey = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
+  assert.equal(invalidKey.statusCode, 503);
+  assert.match((invalidKey.body as { error: string }).error, /API key/i);
+  assert.doesNotMatch(JSON.stringify(invalidKey.body), /test-key/);
+
+  globalThis.fetch = async () => new Response('forbidden', { status: 403 });
+  const forbidden = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
+  assert.equal(forbidden.statusCode, 503);
+  assert.match((forbidden.body as { error: string }).error, /API is enabled/i);
+
+  globalThis.fetch = async () => new Response('not found', { status: 404 });
+  const wrongModel = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
+  assert.equal(wrongModel.statusCode, 503);
+  assert.match((wrongModel.body as { error: string }).error, /GEMINI_MODEL/i);
 
   globalThis.fetch = async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"answer":42,"citations":[]}' }] } }] }), { status: 200 });
   const invalid = await invoke(request('POST', '/api/chat', { question: 'Rent?', document_text: 'Lease agreement. The rent is $900 per month.' }));
