@@ -6,7 +6,7 @@ type AnyResponse = any;
 const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 function send(res: AnyResponse, status: number, body: unknown) {
-  res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(body));
+  return res.status(status).json(body);
 }
 
 function getPath(req: AnyRequest): string {
