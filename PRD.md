@@ -177,6 +177,7 @@ Since this is a **calibration track for the upgraded AI Evaluator**, prompt qual
 | Time overrun on Compare feature | Medium | FR-4 is Must-have; if blocked, ship section-level diff first |
 
 ## 13. Future Scope (post-hackathon)
+- Multilingual simplification and translation with verified language-specific output
 - Multi-document portfolio review for SMBs
 - WhatsApp/Telegram bot interface for low-bandwidth access
 - Partnerships with legal-aid NGOs

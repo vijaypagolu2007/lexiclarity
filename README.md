@@ -73,6 +73,10 @@ All prompts are versioned under [`prompts/`](prompts/):
 
 Deploy as a Node service using `npm install`, `npm run build`, and `npm start`. Set `GEMINI_API_KEY` in the hosting provider’s secret store; never commit it.
 
+## Future level-up ideas
+
+- Add multilingual simplification and translation after language-specific output verification.
+
 ## Disclaimer
 
 LexiClarity is **informational only and does not provide legal advice**. Always consult a qualified lawyer before acting on a legal document.

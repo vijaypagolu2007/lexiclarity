@@ -25,7 +25,6 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
   onResultChange,
 }) => {
   const [readingLevel, setReadingLevel] = useState<'simple' | 'simpler' | 'summary'>('summary');
-  const [language, setLanguage] = useState<string>('English');
   const [loading, setLoading] = useState<boolean>(false);
   const [internalResult, setInternalResult] = useState<SimplifyResult | null>(null);
   const result = externalResult !== undefined ? externalResult : internalResult;
@@ -60,7 +59,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
         body: JSON.stringify({
           document_text: docText,
           reading_level: readingLevel,
-          target_language: language,
+          target_language: 'English',
         }),
       });
 
@@ -92,7 +91,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
     } else if (result?.sections) {
       const fullSpeechText = result.sections.map((s) => `${s.original_heading}. ${s.plain_text}`).join(' ');
       setIsPlayingAudio(true);
-      const speechLang = result.language || language || 'English';
+      const speechLang = result.language || 'English';
       const stopFn = speakText(
         fullSpeechText,
         speechLang,
@@ -233,44 +232,6 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
               </button>
             ))}
           </div>
-
-          {/* Language Selector */}
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="text-xs rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-600"
-          >
-            {[
-              'English',
-              'Hindi',
-              'Spanish',
-              'Tamil',
-              'Telugu',
-              'Kannada',
-              'Malayalam',
-              'Bengali',
-              'Gujarati',
-              'Marathi',
-              'Punjabi',
-              'French',
-              'German',
-              'Italian',
-              'Portuguese',
-              'Russian',
-              'Japanese',
-              'Korean',
-              'Chinese (Mandarin)',
-              'Arabic',
-              'Dutch',
-              'Polish',
-              'Turkish',
-              'Vietnamese',
-            ].map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
 
           <button
             type="button"
@@ -440,7 +401,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
           <BookOpen className="w-8 h-8 text-stone-400 mx-auto mb-2" />
           <p className="text-sm font-medium text-stone-700">No simplified text generated yet.</p>
           <p className="text-xs text-stone-500 mt-1 max-w-md mx-auto">
-            Choose a reading level and language above, then click <strong>✨ Simplify</strong> to translate this contract into clear English or regional languages.
+            Choose a reading level above, then click <strong>✨ Simplify</strong> to rewrite this contract in clear English.
           </p>
         </div>
       )}
