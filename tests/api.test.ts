@@ -58,6 +58,23 @@ test('public model endpoints apply a per-client request limit', async () => {
   assert.equal(limited.statusCode, 429);
 });
 
+test('rate limiting uses the platform client IP and legal guardrail avoids weak keyword matches', async () => {
+  resetRateLimitsForTests();
+  for (let index = 0; index < 12; index += 1) {
+    const req = request('POST', '/api/chat', {}, `untrusted-${index}`);
+    req.headers['x-real-ip'] = '192.0.2.77';
+    assert.notEqual((await invoke(req)).statusCode, 429);
+  }
+  const limited = request('POST', '/api/chat', {}, 'another-forwarded-address');
+  limited.headers['x-real-ip'] = '192.0.2.77';
+  assert.equal((await invoke(limited)).statusCode, 429);
+
+  const unrelated = await invoke(request('POST', '/api/guardrail', { document_text: 'This article discusses the words contract and agreement in ordinary language.' }, '192.0.2.90'));
+  assert.equal((unrelated.body as { is_legal: boolean }).is_legal, false);
+  const lease = await invoke(request('POST', '/api/guardrail', { document_text: 'Lease agreement between landlord and tenant. Tenant shall pay rent each month.' }, '192.0.2.91'));
+  assert.equal((lease.body as { is_legal: boolean }).is_legal, true);
+});
+
 test('Gemini receives retrieved chat context and versioned prompts', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
   let payload: Record<string, any> | undefined;

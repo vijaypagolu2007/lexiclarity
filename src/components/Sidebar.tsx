@@ -63,12 +63,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           aria-describedby="upload-documents-help"
         >
           <Upload className="w-6 h-6 text-stone-600 group-hover:text-amber-700 mx-auto mb-1.5 transition-colors" />
-          <p className="text-xs font-medium text-stone-700 group-hover:text-stone-900">
+          <span className="block text-xs font-medium text-stone-700 group-hover:text-stone-900">
             Click or drag documents here
-          </p>
-          <p id="upload-documents-help" className="text-[11px] text-stone-500 mt-0.5">
+          </span>
+          <span id="upload-documents-help" className="block text-[11px] text-stone-500 mt-0.5">
             TXT, PDF, DOCX (Upload 1 or multiple)
-          </p>
+          </span>
         </button>
       </div>
 
@@ -221,7 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="mt-auto pt-4 border-t border-stone-100 flex items-start space-x-2 text-[11px] text-stone-500">
         <Lock className="w-3.5 h-3.5 text-stone-400 flex-shrink-0 mt-0.5" />
         <span>
-          <strong>In-Memory Privacy:</strong> Document text is processed purely in ephemeral memory and never persisted.
+          <strong>Document privacy:</strong> LexiClarity does not save uploaded files. When you run an AI feature, document text is sent to Google Gemini for processing. Avoid uploading information you are not authorized to share.
         </span>
       </div>
     </aside>

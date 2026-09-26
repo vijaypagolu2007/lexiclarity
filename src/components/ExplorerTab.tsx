@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { ClauseItem, ClauseMapResult, HealthScore } from '../types';
 import { checkItems } from '../utils/grounding';
 import { CATEGORIES, scoreClauses } from '../utils/scoring';
-import { exportAsPdf, exportAsTxt } from '../utils/export';
 import { ExportDropdown } from './ExportDropdown';
 import { Compass, ShieldAlert, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
 import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
+import { keepTabFocusInside } from '../utils/accessibility';
 
 interface ExplorerTabProps {
   docText: string;
@@ -76,8 +76,8 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
       const computedHealth = scoreClauses(verifiedClauses);
 
       setClausesAndHealth(verifiedClauses, computedHealth);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while building the clause map.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred while building the clause map.');
     } finally {
       setLoading(false);
     }
@@ -103,7 +103,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     if (!clauses || !health) return;
     const healthSummary =
       health.overall >= 75
@@ -112,6 +112,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         ? 'Moderate exposure — several watchouts deserve attention'
         : 'High exposure — significant risk or one-sided obligations found';
 
+    const { exportAsPdf } = await import('../utils/export');
     exportAsPdf({
       title: 'LexiClarity — Contract Risk Assessment Report',
       subtitle: `Overall Health Score: ${health.overall}/100 (${healthSummary})`,
@@ -131,7 +132,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     });
   };
 
-  const handleExportTxt = () => {
+  const handleExportTxt = async () => {
     if (!clauses || !health) return;
     const healthSummary =
       health.overall >= 75
@@ -170,6 +171,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
       `DISCLAIMER: Informational GenAI output. Not legal advice.\n` +
       `====================================================\n`;
 
+    const { exportAsTxt } = await import('../utils/export');
     exportAsTxt('lexiclarity_clause_risk_assessment.txt', txtContent);
   };
 
@@ -471,7 +473,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
 
       {/* PDF Highlighted Citation Preview Modal */}
       {previewCitation && (
-        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-label="Source citation preview" onKeyDown={(event) => { if (event.key === 'Escape') setPreviewCitation(null); keepTabFocusInside(event); }} className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
           <div className="w-full max-w-4xl h-[85vh]">
             <DocumentPdfPreview
               docText={docText}

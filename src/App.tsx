@@ -3,12 +3,10 @@ import { Header } from './components/Header';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import { Sidebar } from './components/Sidebar';
 import { SimplifyTab } from './components/SimplifyTab';
-import { ExplorerTab } from './components/ExplorerTab';
 import { CompareTab } from './components/CompareTab';
 import { ChatTab } from './components/ChatTab';
 import { BookOpen, Compass, GitCompare, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { downloadActiveContent } from './utils/export';
 import { extractUploadedText } from './utils/extract';
 import {
   SimplifyResult,
@@ -33,6 +31,8 @@ const TABS: TabItem[] = [
   { id: 'compare', label: 'Compare', icon: GitCompare },
   { id: 'chat', label: 'Document Chat', icon: MessageSquare },
 ];
+
+const ExplorerTab = React.lazy(() => import('./components/ExplorerTab').then((module) => ({ default: module.ExplorerTab })));
 
 export function App() {
   const [activeTab, setActiveTab] = useState<TabId>('simplify');
@@ -216,7 +216,8 @@ export function App() {
   const docAObj = docsLibrary.find((d) => d.id === compareDocAId) || docsLibrary[0];
   const docBObj = docsLibrary.find((d) => d.id === compareDocBId) || docsLibrary[1] || docsLibrary[0];
 
-  const handleDownload = (format: 'pdf' | 'txt' = 'pdf') => {
+  const handleDownload = async (format: 'pdf' | 'txt' = 'pdf') => {
+    const { downloadActiveContent } = await import('./utils/export');
     downloadActiveContent(
       {
         activeTab,
@@ -276,7 +277,7 @@ export function App() {
                     type="button"
                     role="tab"
                     aria-selected={isActive}
-                    aria-controls={`panel-${tab.id}`}
+                    aria-controls="panel-document-tools"
                     tabIndex={isActive ? 0 : -1}
                     onClick={() => setActiveTab(tab.id)}
                     onKeyDown={(event) => {
@@ -305,7 +306,7 @@ export function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                id={`panel-${activeTab}`}
+                id="panel-document-tools"
                 role="tabpanel"
                 aria-labelledby={`tab-${activeTab}`}
                 tabIndex={0}
@@ -325,13 +326,15 @@ export function App() {
                 )}
 
                 {activeTab === 'explorer' && (
-                  <ExplorerTab
-                    docText={activeDocText}
-                    sourceUrl={activeDoc?.sourceUrl}
-                    onOpenDocPrompt={handleLoadSample}
-                    data={explorerData}
-                    onResultChange={setExplorerData}
-                  />
+                  <React.Suspense fallback={<p role="status" aria-live="polite" className="text-sm text-stone-600">Loading clause tools…</p>}>
+                    <ExplorerTab
+                      docText={activeDocText}
+                      sourceUrl={activeDoc?.sourceUrl}
+                      onOpenDocPrompt={handleLoadSample}
+                      data={explorerData}
+                      onResultChange={setExplorerData}
+                    />
+                  </React.Suspense>
                 )}
 
                 {activeTab === 'compare' && (

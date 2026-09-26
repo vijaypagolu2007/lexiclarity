@@ -31,6 +31,8 @@ function getPath(req: RequestLike): string {
 }
 
 function getClientId(req: RequestLike): string {
+  const realIp = req.headers?.['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim()) return realIp.trim().slice(0, 80);
   const forwarded = req.headers?.['x-forwarded-for'];
   const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
   return (value?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown').slice(0, 80);
@@ -74,7 +76,17 @@ async function getBody(req: RequestLike): Promise<JsonObject> {
 }
 
 function normalize(text: string): string {
-  return text.replace(/[“”„«»]/g, '"').replace(/[‘’‚]/g, "'").replace(/[—–―]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase();
+  return text
+    .replace(/[“”„«»]/g, '"')
+    .replace(/[‘’‚]/g, "'")
+    .replace(/[—–―]/g, '-')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\u2009/g, ' ')
+    .replace(/\u200b/g, '')
+    .replace(/…/g, '...')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
 function isGrounded(span: unknown, document: string): boolean {
@@ -268,8 +280,11 @@ function requiredText(body: JsonObject, key: string, maxChars = MAX_DOCUMENT_CHA
 async function handleRoute(route: string, body: JsonObject): Promise<{ status: number; body: JsonObject }> {
   if (route === '/guardrail') {
     const text = requiredText(body, 'document_text');
-    const terms = ['agreement', 'contract', 'lease', 'tenant', 'landlord', 'clause', 'shall', 'liability'];
-    const legal = terms.filter((term) => text.toLowerCase().includes(term)).length >= 2;
+    const lower = text.toLowerCase();
+    const documentType = /\b(contract|agreement|lease|tenancy|policy|terms of service|terms and conditions|notice|nda|non-disclosure|offer letter|memorandum of understanding|will|court order)\b/.test(lower);
+    const legalSignals = /\b(shall|hereby|party|parties|tenant|landlord|lessor|lessee|obligation|liability|indemnif\w*|termination|governing law|effective date|breach|jurisdiction|clause)\b/g;
+    const signalCount = new Set(lower.match(legalSignals) || []).size;
+    const legal = (documentType && signalCount >= 1) || signalCount >= 3;
     return { status: 200, body: { is_legal: legal, document_kind: legal ? 'Legal Document' : 'Non-legal document', confidence: 'medium', reason: legal ? 'Contains contractual language.' : 'Does not contain enough legal terms.' } };
   }
   if (route === '/simplify') {

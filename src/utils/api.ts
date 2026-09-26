@@ -1,6 +1,6 @@
-export async function readApiJson<T = any>(response: Response): Promise<T> {
+export async function readApiJson<T = unknown>(response: Response): Promise<T> {
   const body = await response.text();
-  let data: any = null;
+  let data: unknown = null;
 
   try {
     data = body ? JSON.parse(body) : null;
@@ -9,7 +9,10 @@ export async function readApiJson<T = any>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(data?.error || `API request failed (${response.status})`);
+    const message = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
+      ? data.error
+      : `API request failed (${response.status})`;
+    throw new Error(message);
   }
   return data as T;
 }

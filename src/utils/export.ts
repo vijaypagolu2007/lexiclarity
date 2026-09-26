@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { ChatMessage, ClauseItem, CompareResult, HealthScore, SimplifyResult } from '../types';
 
 export interface PdfExportSection {
   heading: string;
@@ -21,10 +22,10 @@ export interface ActiveTabExportState {
   fileName: string;
   docText: string;
   docBText?: string;
-  simplifyResult?: any;
-  explorerResult?: any;
-  compareResult?: any;
-  chatMessages?: any[];
+  simplifyResult?: SimplifyResult | null;
+  explorerResult?: { clauses: ClauseItem[]; health: HealthScore } | null;
+  compareResult?: CompareResult | null;
+  chatMessages?: ChatMessage[];
 }
 
 export function getActiveTabExportPayload(state: ActiveTabExportState): TabExportData {
@@ -55,7 +56,7 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
             'Source File': fileName || 'Agreement',
           },
           sections: [
-            ...((simplifyResult.sections || []).map((s: any) => ({
+            ...(simplifyResult.sections.map((s) => ({
               heading: s.original_heading,
               body: s.plain_text,
               note: s.source_span,
@@ -65,7 +66,7 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
               ? [
                   {
                     heading: 'Key Terms Defined',
-                    body: simplifyResult.key_terms.map((t: any) => `• ${t.term}: ${t.meaning}`).join('\n\n'),
+                    body: simplifyResult.key_terms.map((t) => `• ${t.term}: ${t.meaning}`).join('\n\n'),
                   },
                 ]
               : []),
@@ -108,7 +109,7 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
                 .map(([cat, score]) => `• ${cat}: ${score}/100`)
                 .join('\n'),
             },
-            ...clauses.map((c: any, i: number) => ({
+            ...clauses.map((c, i) => ({
               heading: `${i + 2}. ${c.heading} [${c.risk_category || 'General'}]`,
               body: `Summary: ${c.summary}\nRisk Rationale: ${c.risk_reason || 'Standard commercial provision.'}`,
               note: c.source_span,
@@ -132,15 +133,15 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
           subtitle: `Overall Impact: ${compareResult.overall_assessment || 'Version comparison report'}`,
           filename: `lexiclarity_${baseFileName}_version_comparison.pdf`,
           metadata: {
-            'Material Changes': `${(compareResult.changes || []).filter((c: any) => c.materiality === 'material').length}`,
-            'Minor Changes': `${(compareResult.changes || []).filter((c: any) => c.materiality === 'minor').length}`,
+            'Material Changes': `${compareResult.changes.filter((c) => c.materiality === 'material').length}`,
+            'Minor Changes': `${compareResult.changes.filter((c) => c.materiality === 'minor').length}`,
           },
           sections: [
             {
               heading: '1. Executive Comparison Assessment',
               body: compareResult.overall_assessment,
             },
-            ...(compareResult.changes || []).map((c: any, i: number) => ({
+            ...compareResult.changes.map((c, i) => ({
               heading: `${i + 2}. ${c.topic} [${(c.materiality || 'minor').toUpperCase()} - ${(c.change_type || 'modified').toUpperCase()}]`,
               body: `Summary:\n${c.summary}\n\nWhat changed for you:\n${c.user_impact}` +
                 (c.source_span_a ? `\n\nOriginal (Version A):\n"${c.source_span_a}"` : '') +
@@ -170,7 +171,7 @@ export function getActiveTabExportPayload(state: ActiveTabExportState): TabExpor
           const botM = validMessages[i + 1];
           if (userM && userM.role === 'user') {
             const citations = botM?.citations?.length
-              ? botM.citations.map((c: any) => `[${c.clause_ref || 'Ref'}] "${c.quote || c}"`).join('\n')
+              ? botM.citations.join('\n')
               : undefined;
             sections.push({
               heading: `Q: ${userM.content}`,

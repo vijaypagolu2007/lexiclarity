@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChatMessage } from '../types';
+import { ChatApiResponse, ChatMessage } from '../types';
 import { MessageSquare, Send, ShieldAlert, Sparkles, User, Bot, Trash2, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
 import { speakText, stopSpeaking } from '../utils/speech';
 import { requireLegalDocument } from '../utils/guardrail';
@@ -107,7 +107,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         }),
       });
 
-      const data = await readApiJson<any>(res);
+      const data = await readApiJson<ChatApiResponse>(res);
       const botMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
@@ -119,11 +119,11 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       };
 
       setMessages((prev) => [...prev, botMsg]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
-        content: `Error answering question: ${err.message || 'Please check your connection and try again.'}`,
+        content: `Error answering question: ${err instanceof Error ? err.message : 'Please check your connection and try again.'}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);

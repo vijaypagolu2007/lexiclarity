@@ -15,6 +15,7 @@ import {
 import { DocumentPdfPreview } from './DocumentPdfPreview';
 import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
+import { keepTabFocusInside } from '../utils/accessibility';
 
 interface CompareTabProps {
   docsLibrary: LoadedDocument[];
@@ -94,8 +95,8 @@ export const CompareTab: React.FC<CompareTabProps> = ({
 
       const data = await readApiJson<CompareResult>(res);
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during comparison.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred during comparison.');
     } finally {
       setLoading(false);
     }
@@ -309,10 +310,11 @@ export const CompareTab: React.FC<CompareTabProps> = ({
             {viewMode === 'structured' ? (
               <div className="flex items-center gap-2">
                 <Filter className="w-3.5 h-3.5 text-stone-400" />
-                <span className="text-stone-500">Filter Materiality:</span>
+                <label htmlFor="compare-materiality-filter" className="text-stone-500">Filter Materiality:</label>
                 <select
+                  id="compare-materiality-filter"
                   value={materialFilter}
-                  onChange={(e) => setMaterialFilter(e.target.value as any)}
+                  onChange={(e) => setMaterialFilter(e.target.value as 'all' | 'material' | 'minor')}
                   className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 focus:outline-none text-xs"
                 >
                   <option value="all">All Changes ({result.changes?.length || 0})</option>
@@ -529,7 +531,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({
 
       {/* PDF Highlighted Citation Preview Modal */}
       {previewCitation && (
-        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-label="Source citation preview" onKeyDown={(event) => { if (event.key === 'Escape') setPreviewCitation(null); keepTabFocusInside(event); }} className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
           <div className="w-full max-w-4xl h-[85vh]">
             <DocumentPdfPreview
               docText={previewCitation.title === docBObj?.name ? docB : docA}

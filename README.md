@@ -4,7 +4,7 @@
 
 **AI for Legal Assistance & Access** — a GenAI web app that makes legal documents understandable to non-lawyers. Built for Hackathon. See [PRD.md](PRD.md).
 
-**Differentiators:** source-grounded explanations with verbatim citations · material contract comparison with "what changed for you" impact lines · privacy-first in-memory processing · audio accessibility.
+**Differentiators:** source-grounded explanations with verbatim citations · material contract comparison with "what changed for you" impact lines · no app-side document persistence (analysis text is sent to Gemini) · audio accessibility.
 
 ## Features
 
@@ -24,7 +24,7 @@
 | 🏷️ Evidence Transparency | — | Outputs labelled Directly stated / Strongly inferred / Needs verification, with confidence levels |
 | ⚡ Sample workflow | — | Judges can load the bundled sample agreement and test every workflow |
 | 🛡️ Guardrails | FR-6 | Non-legal documents are refused; scanned/empty/corrupted files get clear errors |
-| 🔒 Privacy | §6 | In-memory processing only — documents are never stored |
+| 🔒 Privacy | §6 | LexiClarity does not persist uploads; AI analysis sends document text to Google Gemini |
 
 ## Quick start
 
@@ -77,6 +77,8 @@ All prompts are versioned under [`prompts/`](prompts/):
 ## Deployment
 
 Deploy on Vercel with `npm install` and `npm run build`. Set `GEMINI_API_KEY` in the Production environment; never commit it.
+
+The public API applies a 12-request-per-minute IP limit per warm server instance. Vercel instances do not share this in-memory counter; use a shared rate-limit store before relying on it as an abuse-prevention boundary.
 
 ## Future level-up ideas
 

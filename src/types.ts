@@ -66,6 +66,15 @@ export interface ChatMessage {
   timestamp?: number;
 }
 
+export interface ChatApiResponse {
+  answer: string;
+  citations: string[];
+  grounded: boolean;
+  advice_declined: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  evidence_type: 'directly_stated' | 'strongly_inferred' | 'needs_verification';
+}
+
 export interface HealthScore {
   overall: number;
   high_risk_count: number;

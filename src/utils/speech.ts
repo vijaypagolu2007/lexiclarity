@@ -337,7 +337,7 @@ export function speakText(
   text: string,
   hintLanguage: string = 'English',
   onEnd?: () => void,
-  onError?: (err: any) => void
+  onError?: (err: SpeechSynthesisErrorEvent) => void
 ): StopSpeechFunction {
   const stopFn: StopSpeechFunction = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {

@@ -125,6 +125,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
           <input
             type="text"
             value={searchQuery}
+            aria-label="Search text in the document preview"
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setActiveMatchIndex(0);
@@ -139,14 +140,16 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
               </span>
               <button
                 type="button"
-                onClick={() => setActiveMatchIndex((prev) => (prev > 0 ? prev - 1 : totalMatches - 1))}
+              onClick={() => setActiveMatchIndex((prev) => (prev > 0 ? prev - 1 : totalMatches - 1))}
+                aria-label="Previous text match"
                 className="hover:text-amber-200"
               >
                 <ChevronUp className="w-3 h-3" />
               </button>
               <button
                 type="button"
-                onClick={() => setActiveMatchIndex((prev) => (prev < totalMatches - 1 ? prev + 1 : 0))}
+              onClick={() => setActiveMatchIndex((prev) => (prev < totalMatches - 1 ? prev + 1 : 0))}
+                aria-label="Next text match"
                 className="hover:text-amber-200"
               >
                 <ChevronDown className="w-3 h-3" />
@@ -195,6 +198,7 @@ export const DocumentPdfPreview: React.FC<DocumentPdfPreviewProps> = ({
             <button
               type="button"
               onClick={onClose}
+              autoFocus={isModal}
               aria-label="Close document preview"
               className="p-1.5 hover:bg-stone-800 rounded-lg text-stone-400 hover:text-red-400 border border-stone-700"
               title="Close Preview"

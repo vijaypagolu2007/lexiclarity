@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { SimplifyResult } from '../types';
 import { checkItems, groundedRate } from '../utils/grounding';
 import { speakText, stopSpeaking } from '../utils/speech';
-import { exportAsPdf, exportAsTxt } from '../utils/export';
 import { ExportDropdown } from './ExportDropdown';
 import { BookOpen, Volume2, VolumeX, Copy, Check, ShieldAlert, CheckCircle2, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { DocumentPdfPreview } from './DocumentPdfPreview';
 import { requireLegalDocument } from '../utils/guardrail';
 import { readApiJson } from '../utils/api';
+import { keepTabFocusInside } from '../utils/accessibility';
 
 interface SimplifyTabProps {
   docText: string;
@@ -70,8 +70,8 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
         ...data,
         sections: verifiedSections,
       });
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during simplification.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred during simplification.');
     } finally {
       setLoading(false);
     }
@@ -120,8 +120,9 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!result) return;
+    const { exportAsPdf } = await import('../utils/export');
     exportAsPdf({
       title: 'LexiClarity — Plain-Language Document Summary',
       subtitle: `Reading Level: ${result.reading_level.toUpperCase()} | Language: ${result.language}`,
@@ -151,7 +152,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
     });
   };
 
-  const handleDownloadTxt = () => {
+  const handleDownloadTxt = async () => {
     if (!result) return;
     const txtContent =
       `====================================================\n` +
@@ -178,6 +179,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
       `DISCLAIMER: Informational GenAI output. Not legal advice.\n` +
       `====================================================\n`;
 
+    const { exportAsTxt } = await import('../utils/export');
     exportAsTxt(
       `lexiclarity_${(result.document_type || 'contract').toLowerCase().replace(/\s+/g, '_')}_simplified.txt`,
       txtContent
@@ -417,7 +419,7 @@ export const SimplifyTab: React.FC<SimplifyTabProps> = ({
 
       {/* PDF Highlighted Citation Preview Modal */}
       {previewCitation && (
-        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-label="Source citation preview" onKeyDown={(event) => { if (event.key === 'Escape') setPreviewCitation(null); keepTabFocusInside(event); }} className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center">
           <div className="w-full max-w-4xl h-[85vh]">
             <DocumentPdfPreview
               docText={docText}

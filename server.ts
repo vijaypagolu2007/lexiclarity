@@ -9,8 +9,8 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 // Local development and Vercel now use the same API implementation.
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.all('/api/*', (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(apiHandler(req, res)).catch(next);
 });
