@@ -2,7 +2,7 @@
 
 > **LexiClarity helps non-lawyers understand what a legal document says, see how changes affect them, and identify what deserves attention — without pretending to replace a lawyer.**
 
-![LexiClarity landing page with the bundled sample agreement](docs/screenshot.png)
+![LexiClarity simplifying the bundled sample rental agreement, with every section 100% grounded in a source citation](docs/screenshot.png)
 
 **AI for Legal Assistance & Access** — a GenAI web app that makes legal documents understandable to non-lawyers. Built for Hackathon. See [PRD.md](PRD.md).
 
