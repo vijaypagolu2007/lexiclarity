@@ -2,6 +2,8 @@
 
 > **LexiClarity helps non-lawyers understand what a legal document says, see how changes affect them, and identify what deserves attention — without pretending to replace a lawyer.**
 
+![LexiClarity landing page with the bundled sample agreement](docs/screenshot.png)
+
 **AI for Legal Assistance & Access** — a GenAI web app that makes legal documents understandable to non-lawyers. Built for Hackathon. See [PRD.md](PRD.md).
 
 **Differentiators:** source-grounded explanations with verbatim citations · material contract comparison with "what changed for you" impact lines · no app-side document persistence (analysis text is sent to Gemini) · audio accessibility.
